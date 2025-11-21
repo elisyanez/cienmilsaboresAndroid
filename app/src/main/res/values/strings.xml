@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">CienMilSaboresAndroid</string>
+    <string name="home_screen_title">Pastelería Mil Sabores</string>
+    <string name="profile_button_description">Abrir perfil</string>
+    <string name="home_screen_placeholder">Aquí irá tu catálogo de productos 🍰</string>
+</resources>
