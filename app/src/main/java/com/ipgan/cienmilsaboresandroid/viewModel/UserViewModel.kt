@@ -1,45 +1,43 @@
 package com.ipgan.cienmilsaboresandroid.viewModel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.ipgan.cienmilsaboresandroid.model.User
+import com.ipgan.cienmilsaboresandroid.repository.UsuarioRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 class UserViewModel : ViewModel() {
-    // Esta es la lista en memoria para guardar los usuarios. En una app real, esto sería una base de datos.
-    private val registeredUsers = mutableListOf<User>()
 
-    // El usuario que está logueado. Si es nulo, nadie ha iniciado sesión.
+    private val repository = UsuarioRepository()
+
     private val _user = MutableStateFlow<User?>(null)
     val user: StateFlow<User?> = _user.asStateFlow()
 
-    init {
-        // Para probar, vamos a registrar un usuario de antemano.
-        registeredUsers.add(User(email = "admin@local", password = "password", name = "Admin", address = "Local"))
-    }
-
+    // 1. CAMBIAMOS LA FUNCIÓN PARA QUE SEA 'suspend' Y DEVUELVA UN USUARIO O NULO
     /**
-     * Para registrar un nuevo usuario.
-     * @return Devuelve verdadero si se registra bien, falso si el usuario ya existe.
+     * Intenta loguear un usuario usando el repositorio.
+     * Esta función es 'suspend' porque necesita esperar la respuesta de la API.
+     * @return Devuelve el objeto User si el login es exitoso, o null si falla.
      */
-    fun register(user: User): Boolean {
-        // Reviso si el usuario ya existe.
-        if (registeredUsers.any { it.email == user.email }) {
-            return false // El usuario con este correo ya existe.
-        }
-        registeredUsers.add(user)
-        return true
-    }
+    suspend fun login(email: String, pass: String): User? {
+        val userList = repository.getUsuarios()
+        val foundUser = userList?.find { it.email == email && it.password == pass }
 
-    /**
-     * Para intentar loguear un usuario, revisando la lista de registrados.
-     * @return Verdadero si se loguea bien, si no, falso.
-     */
-    fun login(email: String, pass: String): Boolean {
-        val foundUser = registeredUsers.find { it.email == email && it.password == pass }
+        // Si encontramos al usuario, lo guardamos en nuestro estado.
         _user.value = foundUser
-        return foundUser != null
+        return foundUser
+    }
+
+    /**
+     * Para registrar un nuevo usuario usando la API.
+     * La función ahora es 'suspend' porque la operación de red toma tiempo.
+     * @return Devuelve verdadero si se registra bien, falso si no.
+     */
+    suspend fun register(user: User): Boolean {
+        return repository.saveUsuario(user)
     }
 
     /**
@@ -51,14 +49,12 @@ class UserViewModel : ViewModel() {
 
     /**
      * Para actualizar el perfil del usuario que está logueado.
+     * La función ahora es 'suspend' para reflejar la llamada a la API.
      */
-    fun updateUser(updatedUser: User) {
-        // El usuario tiene que estar logueado para poder actualizar su perfil.
+    suspend fun updateUser(updatedUser: User) {
         _user.value?.let { currentUser ->
-            val index = registeredUsers.indexOfFirst { u -> u.email == currentUser.email }
-            if (index != -1) {
-                // Actualizamos el usuario en la lista y también el estado del usuario logueado.
-                registeredUsers[index] = updatedUser
+            val run = currentUser.run
+            if (repository.updateUsuario(run, updatedUser)) {
                 _user.value = updatedUser
             }
         }

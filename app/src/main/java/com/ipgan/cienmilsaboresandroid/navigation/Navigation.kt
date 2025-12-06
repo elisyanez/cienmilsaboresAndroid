@@ -3,14 +3,14 @@ package com.ipgan.cienmilsaboresandroid.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+// import androidx.compose.runtime.remember // Ya no necesitamos 'remember' para el repo
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.ipgan.cienmilsaboresandroid.data.ProductRepositoryFake
+// import com.ipgan.cienmilsaboresandroid.data.ProductRepositoryFake // 1. ELIMINAMOS EL REPO FALSO
 import com.ipgan.cienmilsaboresandroid.screens.CarritoScreen
 import com.ipgan.cienmilsaboresandroid.screens.CatalogoScreen
 import com.ipgan.cienmilsaboresandroid.screens.DetalleScreen
@@ -37,7 +37,6 @@ sealed class Screen(val route: String) {
 @Composable
 fun CienMilSaboresNavigation() {
     val navController = rememberNavController()
-    val repo = remember { ProductRepositoryFake() }
     val userViewModel: UserViewModel = viewModel()
     val user by userViewModel.user.collectAsState()
 
@@ -61,37 +60,37 @@ fun CienMilSaboresNavigation() {
         }
 
         composable(Screen.Perfil.route) {
-            user?.let { // Solo se puede acceder si el usuario está logueado
+            user?.let { loggedInUser ->
                 PerfilScreen(
-                    onSave = { 
-                        // Lógica para guardar los datos del perfil, posiblemente en el ViewModel
+                    userViewModel = userViewModel,
+                    user = loggedInUser,          // Le pasamos los datos del usuario
+                    onSave = {
                         navController.popBackStack()
-                     },
-                    onBackToHome = { navController.popBackStack() }
+                    },
+                    onBackToHome = {
+                        navController.popBackStack()
+                    }
                 )
             }
         }
 
         composable(Screen.Carrito.route) {
-            CarritoScreen(repo = repo)
+            CarritoScreen()
         }
 
         composable(Screen.Catalogo.route) {
-            CatalogoScreen(repo = repo, navController = navController)
+            CatalogoScreen(navController = navController)
         }
 
         composable(Screen.Login.route) {
             LoginScreen(
-                onLogin = { email, pass ->
-                    if (!userViewModel.login(email, pass)) {
-                        throw Exception("Email o contraseña incorrectos")
-                    }
+                onLoginSuccess = {
                     navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.Login.route) { inclusive = true } // Remove login from backstack
+                        popUpTo(Screen.Login.route) { inclusive = true }
                     }
                 },
                 onGoRegister = { navController.navigate(Screen.Registro.route) },
-                onForgotPassword = null // Explicitly passing null for the optional parameter
+                onForgotPassword = null // No implementamos esto todavía
             )
         }
 
@@ -114,7 +113,6 @@ fun CienMilSaboresNavigation() {
         ) { backStackEntry ->
             val productId = backStackEntry.arguments?.getInt("productId") ?: 0
             DetalleScreen(
-                repo = repo,
                 navController = navController,
                 productId = productId
             )

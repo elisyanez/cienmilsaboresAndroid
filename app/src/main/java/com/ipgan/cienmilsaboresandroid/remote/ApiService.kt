@@ -14,5 +14,12 @@ interface ApiService {
     suspend fun getPostById(@Path("id") id: Int): Post
 
     @POST("posts")
-    suspend fun createPost(@Body post: Post): Post
+    suspend fun createPost(@Body post: Post): Response<Post>
+
+    @PUT("posts/{id}")
+    suspend fun updatePost(@Path("id") id: Int, @Body post: Post): Response<Post>
+
+    @DELETE("posts/{id}")
+    suspend fun deletePost(@Path("id") id: Int)
+
 }

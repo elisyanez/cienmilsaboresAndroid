@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
@@ -60,6 +61,7 @@ fun RegisterScreen(
     onBack: () -> Unit
 ) {
     var name by rememberSaveable { mutableStateOf("") }
+    var run by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
     var address by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
@@ -70,7 +72,11 @@ fun RegisterScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     fun validate(): Boolean {
-        return name.isNotBlank() && email.isNotBlank() && address.isNotBlank() && password.length >= 6
+        return run.length>=9 && run.contains('-') &&
+                name.isNotBlank() &&
+                email.isNotBlank() &&
+                address.isNotBlank() &&
+                password.length >= 6
     }
 
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { inner ->
@@ -113,6 +119,16 @@ fun RegisterScreen(
                     )
 
                     Spacer(Modifier.height(24.dp))
+
+                    OutlinedTextField(
+                        value = run,
+                        onValueChange = { run = it },
+                        label = { Text("RUN (sin puntos y con guion)") },
+                        leadingIcon = { Icon(Icons.Filled.AccountBox, contentDescription = null) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(12.dp))
 
                     OutlinedTextField(
                         value = name,
@@ -166,10 +182,10 @@ fun RegisterScreen(
                     Button(
                         onClick = {
                             if (validate()) {
-                                isLoading = true
-                                val newUser = User(name = name, email = email, address = address, password = password)
-                                val success = userViewModel.register(newUser)
                                 scope.launch {
+                                    isLoading = true
+                                    val newUser = User(run= run, name = name, email = email, address = address, password = password)
+                                    val success = userViewModel.register(newUser)
                                     if (success) {
                                         snackbarHostState.showSnackbar("Registro exitoso")
                                         onRegisterSuccess()

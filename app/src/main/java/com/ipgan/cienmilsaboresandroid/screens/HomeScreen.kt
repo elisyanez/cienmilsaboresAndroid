@@ -52,7 +52,7 @@ fun HomeScreen(
 ) {
     Scaffold(
         topBar = {
-            HomeTopAppBar(onProfileClick = onProfileClick)
+            HomeTopAppBar(onProfileClick = onProfileClick, isLoggedIn = isLoggedIn)
         }
     ) { innerPadding ->
         Column(
@@ -183,7 +183,7 @@ fun HomeScreen(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun HomeTopAppBar(onProfileClick: () -> Unit) {
+private fun HomeTopAppBar(onProfileClick: () -> Unit, isLoggedIn: Boolean) {
     TopAppBar(
         title = {
             Text(
@@ -192,11 +192,13 @@ private fun HomeTopAppBar(onProfileClick: () -> Unit) {
             )
         },
         actions = {
-            IconButton(onClick = onProfileClick) {
-                Icon(
-                    imageVector = Icons.Default.AccountCircle,
-                    contentDescription = "Abrir perfil"
-                )
+            if (isLoggedIn) {
+                IconButton(onClick = onProfileClick) {
+                    Icon(
+                        imageVector = Icons.Default.AccountCircle,
+                        contentDescription = "Abrir perfil"
+                    )
+                }
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(

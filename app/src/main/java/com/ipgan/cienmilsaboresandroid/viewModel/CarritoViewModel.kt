@@ -1,27 +1,36 @@
 package com.ipgan.cienmilsaboresandroid.viewModel
 
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.ipgan.cienmilsaboresandroid.model.Product
 
-class CarritoViewModel: ViewModel() {
-    val itemsCarrito = mutableListOf<Product>()
-    val total= mutableStateOf(0.0)
+class CarritoViewModel : ViewModel() {
+    private val _itemsCarrito = mutableStateMapOf<Product, Int>()
+    val itemsCarrito: Map<Product, Int> = _itemsCarrito
+
+    private val _total = mutableStateOf(0.0)
+    val total: State<Double> = _total
 
     fun agregarItems(product: Product) {
-        itemsCarrito.add(product)
+        _itemsCarrito[product] = (_itemsCarrito[product] ?: 0) + 1
         calcularTotal()
     }
+
     fun eliminarItems(product: Product) {
-        itemsCarrito.remove(product)
-        calcularTotal()
+        if (_itemsCarrito.containsKey(product)) {
+            _itemsCarrito.remove(product)
+            calcularTotal()
+        }
     }
+
     private fun calcularTotal() {
-        total.value = itemsCarrito.sumOf { it.precio_prod }.toDouble()
+        _total.value = _itemsCarrito.entries.sumOf { (product, qty) -> (product.price * qty).toDouble() }
     }
 
     fun vaciarItems() {
-        itemsCarrito.clear()
-        total.value = 0.0
+        _itemsCarrito.clear()
+        _total.value = 0.0
     }
 }

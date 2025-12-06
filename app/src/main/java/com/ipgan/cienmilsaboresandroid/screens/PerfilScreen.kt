@@ -1,39 +1,14 @@
 package com.ipgan.cienmilsaboresandroid.screens
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -43,24 +18,48 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ipgan.cienmilsaboresandroid.R
+import com.ipgan.cienmilsaboresandroid.model.User
 import com.ipgan.cienmilsaboresandroid.ui.theme.CienMilSaboresAndroidTheme
+import com.ipgan.cienmilsaboresandroid.viewModel.UserViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PerfilScreen(
-    onSave: () -> Unit = {},
-    onBackToHome: () -> Unit = {}
+    // 1. RECIBIMOS EL VIEWMODEL Y LOS DATOS DEL USUARIO
+    userViewModel: UserViewModel = viewModel(),
+    user: User, // Recibimos el usuario que ya está logueado
+    onSave: () -> Unit,
+    onBackToHome: () -> Unit
 ) {
-    var nombres by rememberSaveable { mutableStateOf("Admin") }
-    var apellidos by rememberSaveable { mutableStateOf("General") }
-    var correo by rememberSaveable { mutableStateOf("admin@local") }
+    // 2. INICIALIZAMOS LOS CAMPOS CON LOS DATOS REALES DEL USUARIO
+    // Usamos 'LaunchedEffect' para asegurarnos de que los campos se llenen
+    // solo una vez cuando el composable aparece.
+    var nombres by rememberSaveable { mutableStateOf("") }
+    var apellidos by rememberSaveable { mutableStateOf("") }
+    var correo by rememberSaveable { mutableStateOf("") }
     var region by rememberSaveable { mutableStateOf("") }
     var comuna by rememberSaveable { mutableStateOf("") }
     var direccion by rememberSaveable { mutableStateOf("") }
     var nuevaPassword by rememberSaveable { mutableStateOf("") }
     var showPass by rememberSaveable { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
 
+    LaunchedEffect(user) {
+        nombres = user.name.split(" ").firstOrNull() ?: ""
+        apellidos = user.name.split(" ").drop(1).joinToString(" ")
+        correo = user.email
+        // Aquí puedes agregar la lógica para extraer región, comuna y dirección si estuvieran en un solo campo.
+        // Por ahora, lo dejo como podrías manejarlo si vinieran separados.
+        direccion = user.address ?: ""
+    }
+
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // --- Listas para los desplegables (esto se mantiene igual) ---
     val regiones = listOf("Región Metropolitana", "Valparaíso", "Biobío")
     val comunasRM = listOf("Santiago", "Providencia", "Las Condes")
     val comunasV  = listOf("Valparaíso", "Viña del Mar", "Quilpué")
@@ -76,8 +75,9 @@ fun PerfilScreen(
     var regionExpanded by remember { mutableStateOf(false) }
     var comunaExpanded by remember { mutableStateOf(false) }
 
-    Scaffold {
-        inner ->
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { inner ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -98,6 +98,7 @@ fun PerfilScreen(
                         .verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    // --- La UI se mantiene igual, solo cambia el botón de guardar ---
                     Image(
                         painter = painterResource(id = R.drawable.logo_mil_sabores),
                         contentDescription = "Mil Sabores",
@@ -106,10 +107,7 @@ fun PerfilScreen(
 
                     Spacer(Modifier.height(12.dp))
 
-                    Text(
-                        text = "Mi Perfil",
-                        style = MaterialTheme.typography.headlineSmall
-                    )
+                    Text(text = "Mi Perfil", style = MaterialTheme.typography.headlineSmall)
                     Text(
                         text = "Actualiza tus datos personales",
                         style = MaterialTheme.typography.bodyMedium,
@@ -144,8 +142,14 @@ fun PerfilScreen(
                         label = { Text("Correo") },
                         leadingIcon = { Icon(Icons.Filled.Email, contentDescription = null) },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        readOnly = true, // El correo y el RUN no deberían ser editables.
+                        enabled = false
                     )
+
+                    // ... (El resto de los campos: región, comuna, dirección, contraseña)
+                    // ... El código para los desplegables y otros TextFields va aquí...
+                    // (Omitido por brevedad, es el mismo que ya tenías)
                     Spacer(Modifier.height(12.dp))
 
                     ExposedDropdownMenuBox(
@@ -215,6 +219,7 @@ fun PerfilScreen(
                                         comuna = it
                                         comunaExpanded = false
                                     }
+
                                 )
                             }
                         }
@@ -246,13 +251,39 @@ fun PerfilScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
+
                     Spacer(Modifier.height(24.dp))
 
+                    // 3. IMPLEMENTAMOS LA LÓGICA DEL BOTÓN
                     Button(
-                        onClick = onSave,
-                        modifier = Modifier.fillMaxWidth()
+                        onClick = {
+                            scope.launch {
+                                isLoading = true
+                                // Creamos un nuevo objeto User con los datos actualizados del formulario
+                                val updatedUser = user.copy(
+                                    name = "$nombres $apellidos".trim(),
+                                    email = correo, // El email no cambia
+                                    address = "$direccion, $comuna, $region".trim(),
+                                    // Si hay una nueva contraseña, la usamos, si no, mantenemos la original.
+                                    password = if (nuevaPassword.isNotBlank()) nuevaPassword else user.password
+                                )
+
+                                // Llamamos a la función suspend del ViewModel
+                                userViewModel.updateUser(updatedUser)
+
+                                isLoading = false
+                                snackbarHostState.showSnackbar("Perfil actualizado correctamente")
+                                onSave() // Navegamos hacia atrás
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isLoading
                     ) {
-                        Text("Guardar cambios")
+                        if (isLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                        } else {
+                            Text("Guardar cambios")
+                        }
                     }
 
                     Spacer(Modifier.height(8.dp))
@@ -271,10 +302,13 @@ fun PerfilScreen(
     }
 }
 
+// 4. ACTUALIZAMOS LA PREVIEW PARA QUE FUNCIONE
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 private fun PerfilScreenPreview() {
     CienMilSaboresAndroidTheme {
-        PerfilScreen()
+        // Para la preview, creamos un usuario falso.
+        val previewUser = User(run = "1-9", name = "Juan Pérez", email = "juan.perez@email.com", password = "123", address = "Av. Siempre Viva 123")
+        PerfilScreen(user = previewUser, onSave = {}, onBackToHome = {})
     }
 }

@@ -11,7 +11,9 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -22,13 +24,18 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel // 1. IMPORTAMOS viewModel()
 import com.ipgan.cienmilsaboresandroid.R
 import com.ipgan.cienmilsaboresandroid.ui.theme.CienMilSaboresAndroidTheme
+import com.ipgan.cienmilsaboresandroid.viewModel.UserViewModel // 2. IMPORTAMOS EL UserViewModel
 import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
-    onLogin: suspend (String, String) -> Unit,
+    // 3. CAMBIAMOS LOS PARÁMETROS
+    // Ahora recibimos el ViewModel y las acciones de navegación por separado.
+    userViewModel: UserViewModel = viewModel(),
+    onLoginSuccess: () -> Unit,
     onGoRegister: () -> Unit,
     onForgotPassword: (() -> Unit)? = null
 ) {
@@ -50,6 +57,9 @@ fun LoginScreen(
         return isEmailValid && isPasswordValid
     }
 
+    // --- El resto de la UI se mantiene casi igual ---
+    // Solo cambia la lógica del botón "Entrar"
+
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { inner ->
         Box(
             modifier = Modifier
@@ -58,7 +68,6 @@ fun LoginScreen(
                 .padding(horizontal = 16.dp),
             contentAlignment = Alignment.Center
         ) {
-            // Esta es la tarjeta que diseñamos para el login.
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -70,7 +79,6 @@ fun LoginScreen(
                     modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Aquí va nuestro logo.
                     Image(
                         painter = painterResource(id = R.drawable.logo_mil_sabores),
                         contentDescription = "Mil Sabores",
@@ -79,7 +87,6 @@ fun LoginScreen(
 
                     Spacer(Modifier.height(12.dp))
 
-                    // El título y subtítulo de la pantalla.
                     Text(
                         text = "Iniciar Sesión",
                         style = MaterialTheme.typography.headlineSmall
@@ -92,7 +99,6 @@ fun LoginScreen(
 
                     Spacer(Modifier.height(24.dp))
 
-                    // Campo para el correo.
                     OutlinedTextField(
                         value = email,
                         onValueChange = {
@@ -121,7 +127,6 @@ fun LoginScreen(
 
                     Spacer(Modifier.height(12.dp))
 
-                    // Campo para la contraseña.
                     OutlinedTextField(
                         value = password,
                         onValueChange = {
@@ -156,13 +161,13 @@ fun LoginScreen(
                                 if (validate()) {
                                     focus.clearFocus()
                                     scope.launch {
-                                        try {
-                                            isLoading = true
-                                            onLogin(email, password)
-                                        } catch (e: Exception) {
-                                            snackbarHostState.showSnackbar(e.message ?: "No se pudo iniciar sesión")
-                                        } finally {
-                                            isLoading = false
+                                        isLoading = true
+                                        val loggedInUser = userViewModel.login(email, password)
+                                        isLoading = false
+                                        if (loggedInUser != null) {
+                                            onLoginSuccess()
+                                        } else {
+                                            snackbarHostState.showSnackbar("Email o contraseña incorrectos")
                                         }
                                     }
                                 }
@@ -170,7 +175,6 @@ fun LoginScreen(
                         )
                     )
 
-                    // Botón por si se olvida la contraseña.
                     if (onForgotPassword != null) {
                         TextButton(
                             onClick = onForgotPassword,
@@ -184,18 +188,22 @@ fun LoginScreen(
 
                     Spacer(Modifier.height(20.dp))
 
-                    // El botón para entrar a la app.
+                    // 4. ACTUALIZAMOS LA LÓGICA DEL BOTÓN
                     Button(
                         onClick = {
                             if (validate()) {
                                 scope.launch {
-                                    try {
-                                        isLoading = true
-                                        onLogin(email, password)
-                                    } catch (e: Exception) {
-                                        snackbarHostState.showSnackbar(e.message ?: "No se pudo iniciar sesión")
-                                    } finally {
-                                        isLoading = false
+                                    isLoading = true
+                                    // Llamamos directamente al ViewModel
+                                    val loggedInUser = userViewModel.login(email, password)
+                                    isLoading = false // Detenemos la carga después de la respuesta
+
+                                    if (loggedInUser != null) {
+                                        // Si el login es exitoso, llamamos a la acción de navegación.
+                                        onLoginSuccess()
+                                    } else {
+                                        // Si falla, mostramos el mensaje.
+                                        snackbarHostState.showSnackbar("Email o contraseña incorrectos")
                                     }
                                 }
                             }
@@ -214,12 +222,10 @@ fun LoginScreen(
                         }
                     }
 
-                    // Un separador para que se vea más ordenado.
                     Spacer(Modifier.height(8.dp))
                     HorizontalDivider()
                     Spacer(Modifier.height(8.dp))
 
-                    // El botón para crear una cuenta nueva.
                     TextButton(
                         onClick = onGoRegister,
                         modifier = Modifier.align(Alignment.CenterHorizontally),
@@ -239,10 +245,10 @@ fun LoginScreen(
 )
 @Composable
 fun LoginScreenPreview() {
-    // Hay que envolver la preview con nuestro tema para que se vea como la app final.
     CienMilSaboresAndroidTheme {
+        // La preview ahora solo necesita las acciones de navegación.
         LoginScreen(
-            onLogin = { _, _ -> },
+            onLoginSuccess = {},
             onGoRegister = {},
             onForgotPassword = {}
         )
