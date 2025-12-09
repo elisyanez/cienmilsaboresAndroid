@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -47,6 +48,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ipgan.cienmilsaboresandroid.R
 import com.ipgan.cienmilsaboresandroid.model.User
 import com.ipgan.cienmilsaboresandroid.ui.theme.CienMilSaboresAndroidTheme
@@ -55,7 +57,8 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun RegisterScreen(
-    userViewModel: UserViewModel,
+    // 1. CAMBIAMOS LA FIRMA PARA USAR viewModel() POR DEFECTO
+    userViewModel: UserViewModel = viewModel(),
     onRegisterSuccess: () -> Unit,
     onGoLogin: () -> Unit,
     onBack: () -> Unit
@@ -72,9 +75,11 @@ fun RegisterScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     fun validate(): Boolean {
-        return run.length>=9 && run.contains('-') &&
+        // Validación un poco más robusta para el RUN
+        val cleanRun = run.replace(".", "").replace("-", "")
+        return cleanRun.length in 8..9 &&
                 name.isNotBlank() &&
-                email.isNotBlank() &&
+                android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() &&
                 address.isNotBlank() &&
                 password.length >= 6
     }
@@ -184,26 +189,30 @@ fun RegisterScreen(
                             if (validate()) {
                                 scope.launch {
                                     isLoading = true
-                                    val newUser = User(run= run, name = name, email = email, address = address, password = password)
+                                    val newUser = User(run= run, name = name, email = email, address = address, password = password, lastName = "", region = "REGION_METROPOLITANA", commune = "SANTIAGO", role = "cliente")
                                     val success = userViewModel.register(newUser)
                                     if (success) {
                                         snackbarHostState.showSnackbar("Registro exitoso")
                                         onRegisterSuccess()
                                     } else {
-                                        snackbarHostState.showSnackbar("El correo electrónico ya está en uso")
+                                        snackbarHostState.showSnackbar("El correo o RUN ya está en uso")
                                     }
                                     isLoading = false
                                 }
                             } else {
                                 scope.launch {
-                                    snackbarHostState.showSnackbar("Por favor, complete todos los campos.")
+                                    snackbarHostState.showSnackbar("Por favor, complete todos los campos correctamente.")
                                 }
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !isLoading
                     ) {
-                        Text("Registrarse")
+                        if (isLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        } else {
+                            Text("Registrarse")
+                        }
                     }
 
                     Spacer(Modifier.height(8.dp))
@@ -212,14 +221,16 @@ fun RegisterScreen(
 
                     TextButton(
                         onClick = onGoLogin,
-                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                        enabled = !isLoading
                     ) {
                         Text("¿Ya tienes cuenta? Inicia sesión")
                     }
 
                     TextButton(
                         onClick = onBack,
-                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                        enabled = !isLoading
                     ) {
                         Text("Volver")
                     }
@@ -234,8 +245,9 @@ fun RegisterScreen(
 @Composable
 private fun RegisterScreenPreview() {
     CienMilSaboresAndroidTheme {
+        // 2. AHORA LLAMAMOS A LA FUNCIÓN SIN EL VIEWMODEL
+        // La preview funcionará porque `viewModel()` sabe cómo manejarla.
         RegisterScreen(
-            userViewModel = UserViewModel(),
             onRegisterSuccess = {},
             onGoLogin = {},
             onBack = {}

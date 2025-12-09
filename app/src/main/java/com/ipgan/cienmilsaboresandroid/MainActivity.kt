@@ -11,7 +11,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ipgan.cienmilsaboresandroid.navigation.CienMilSaboresNavigation
 import com.ipgan.cienmilsaboresandroid.ui.theme.*
 import com.ipgan.cienmilsaboresandroid.viewModel.CarritoViewModel
-import com.ipgan.cienmilsaboresandroid.viewModel.UsuarioViewModel
+import com.ipgan.cienmilsaboresandroid.viewModel.UserViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -22,7 +22,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val usuarioViewModel: UsuarioViewModel = viewModel()
+                    val usuarioViewModel: UserViewModel = viewModel()
                     val carritoViewModel: CarritoViewModel = viewModel()
 
                     CienMilSaboresNavigation()

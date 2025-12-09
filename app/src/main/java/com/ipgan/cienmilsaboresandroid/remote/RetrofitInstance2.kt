@@ -1,16 +1,67 @@
 package com.ipgan.cienmilsaboresandroid.remote
 
+import android.content.Context
+import com.google.gson.GsonBuilder
+import com.ipgan.cienmilsaboresandroid.config.NgrokManager
+import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
+import com.ipgan.cienmilsaboresandroid.config.TokenManager // <-- 1. IMPORTAMOS TOKEN MANAGER
+import okhttp3.logging.HttpLoggingInterceptor
 
+object RetrofitInstance2 {
 
-object RetrofitInstance2{
-    val api: ApiService2 by lazy {
-        Retrofit.Builder()
-            .baseUrl("http://10.0.2.2:8080/api/")
-            .addConverterFactory(GsonConverterFactory.create())
-            //permite conectarse: abrir y cerrar conexiones
-            .build()
-            .create(ApiService2::class.java)
+    @Volatile
+    private var apiService: ApiService2? = null
+    private var currentUrl: String = ""
+
+    fun getApi(context: Context): ApiService2 {
+        synchronized(this) {
+            val baseUrl = NgrokManager.getBaseUrl(context)
+            if (apiService != null && baseUrl == currentUrl) {
+                return apiService!!
+            }
+            currentUrl = baseUrl
+
+            val loggingInterceptor = HttpLoggingInterceptor().apply {
+                level = HttpLoggingInterceptor.Level.BODY
+            }
+
+            //Interceptor de Token
+            val authInterceptor = okhttp3.Interceptor { chain ->
+                val requestBuilder = chain.request().newBuilder()
+                // Obtenemos el token guardado
+                val token = TokenManager.getToken(context)
+                if (token != null) {
+                    // Si hay token, lo añadimos a la cabecera 'Authorization'
+                    requestBuilder.addHeader("Authorization", "Bearer $token")
+                }
+                chain.proceed(requestBuilder.build())
+            }
+
+            // 3. AÑADIMOS EL INTERCEPTOR AL CLIENTE HTTP
+
+            val client = OkHttpClient.Builder()
+                .addInterceptor(authInterceptor) // <-- LO AÑADIMOS AQUÍ
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
+                .writeTimeout(30, TimeUnit.SECONDS)
+                .build()
+            val retrofit = Retrofit.Builder()
+                .baseUrl(currentUrl)
+                .client(client) // Usamos el nuevo cliente con el interceptor
+                .addConverterFactory(GsonConverterFactory.create(GsonBuilder().create()))
+                .build()
+
+            apiService = retrofit.create(ApiService2::class.java)
+            return apiService!!
+        }
+    }
+
+    fun invalidate() {
+        synchronized(this) {
+            apiService = null
+        }
     }
 }

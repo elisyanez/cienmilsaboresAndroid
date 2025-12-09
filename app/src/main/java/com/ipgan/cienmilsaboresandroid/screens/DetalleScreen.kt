@@ -39,7 +39,7 @@ fun DetalleScreen(
 ) {
     // 2. OBSERVAMOS EL PRODUCTO ESPECÍFICO DESDE EL PRODUCTVIEWMODEL.
     val product by productViewModel.selectedProduct.collectAsState()
-    val isLoading by productViewModel.isLoading
+    val isLoading by productViewModel.isLoading.collectAsState()
 
     // 3. CARGAMOS EL PRODUCTO ESPECÍFICO CUANDO LA PANTALLA APARECE.
     // Usamos `LaunchedEffect` para llamar a la función `suspend` solo una vez.
@@ -81,9 +81,9 @@ fun ProductDetails(product: Product, onAddToCart: () -> Unit) {
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(text = product.name, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text(text = (product.name)?: "Producto sin nombre", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = product.description, style = MaterialTheme.typography.bodyLarge)
+        Text(text = (product.description)?: "Producto sin descripción", style = MaterialTheme.typography.bodyLarge)
         Spacer(modifier = Modifier.height(4.dp))
         Text(text = "Precio: ${product.price} CLP", style = MaterialTheme.typography.bodyLarge)
         Spacer(modifier = Modifier.height(4.dp))

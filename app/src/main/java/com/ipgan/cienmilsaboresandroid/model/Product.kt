@@ -3,27 +3,27 @@ package com.ipgan.cienmilsaboresandroid.model
 import com.google.gson.annotations.SerializedName
 
 data class Product(
-    @SerializedName("id_prod")
-    val id: Int,
+    @SerializedName("codigo")
+    val id: Int?,
 
-    @SerializedName("nom_prod")
-    val name: String,
+    @SerializedName("nombre")
+    val name: String?,
 
-    @SerializedName("desc_prod")
-    val description: String,
+    @SerializedName("descripcion")
+    val description: String?,
 
-    @SerializedName("categoria_prod")
-    val category: String = "",
+    @SerializedName("categoria")
+    val category: String? = "",
 
-    @SerializedName("imagen_prod")
-    val imageUrl: String,
+    @SerializedName("imagenUrl")
+    val imageUrl: String?,
 
-    @SerializedName("precio_prod")
-    val price: Int,
+    @SerializedName("precio")
+    val price: Int?,
 
-    @SerializedName("visible_prod")
-    val isVisible: Boolean,
+    @SerializedName("visible")
+    val isVisible: Boolean?,
 
-    @SerializedName("stock_prod")
-    val stock: Int
+    @SerializedName("stock")
+    val stock: Int?
 )

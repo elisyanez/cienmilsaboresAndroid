@@ -1,24 +1,15 @@
 package com.ipgan.cienmilsaboresandroid.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.collectAsState // 1. ASEGÚRATE DE TENER ESTA IMPORTACIÓN
 import androidx.compose.runtime.getValue
-// import androidx.compose.runtime.remember // Ya no necesitamos 'remember' para el repo
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-// import com.ipgan.cienmilsaboresandroid.data.ProductRepositoryFake // 1. ELIMINAMOS EL REPO FALSO
-import com.ipgan.cienmilsaboresandroid.screens.CarritoScreen
-import com.ipgan.cienmilsaboresandroid.screens.CatalogoScreen
-import com.ipgan.cienmilsaboresandroid.screens.DetalleScreen
-import com.ipgan.cienmilsaboresandroid.screens.HomeScreen
-import com.ipgan.cienmilsaboresandroid.screens.LoginScreen
-import com.ipgan.cienmilsaboresandroid.screens.PerfilScreen
-import com.ipgan.cienmilsaboresandroid.screens.RegisterScreen
-import com.ipgan.cienmilsaboresandroid.screens.SplashScreen
+import com.ipgan.cienmilsaboresandroid.screens.*
 import com.ipgan.cienmilsaboresandroid.viewModel.UserViewModel
 
 sealed class Screen(val route: String) {
@@ -32,12 +23,14 @@ sealed class Screen(val route: String) {
         fun createRoute(productId: Int) = "detalle/$productId"
     }
     object Splash : Screen("splash")
+    object NgrokConfig : Screen("ngrok_config")
 }
 
 @Composable
 fun CienMilSaboresNavigation() {
     val navController = rememberNavController()
     val userViewModel: UserViewModel = viewModel()
+
     val user by userViewModel.user.collectAsState()
 
     NavHost(
@@ -50,20 +43,22 @@ fun CienMilSaboresNavigation() {
 
         composable(Screen.Home.route) {
             HomeScreen(
-                isLoggedIn = user != null,
+                user = user, // <--- ESTE ES EL CAMBIO CLAVE
                 onProfileClick = { navController.navigate(Screen.Perfil.route) },
                 onCartClick = { navController.navigate(Screen.Carrito.route) },
                 onCatalogClick = { navController.navigate(Screen.Catalogo.route) },
                 onLoginClick = { navController.navigate(Screen.Login.route) },
-                onLogoutClick = { userViewModel.logout() }
+                onLogoutClick = { userViewModel.logout() },
+                onNgrokConfigClick = { navController.navigate(Screen.NgrokConfig.route) }
             )
         }
 
         composable(Screen.Perfil.route) {
+            // La lógica aquí es correcta. Si no hay usuario, no se entra a Perfil.
             user?.let { loggedInUser ->
                 PerfilScreen(
                     userViewModel = userViewModel,
-                    user = loggedInUser,          // Le pasamos los datos del usuario
+                    user = loggedInUser,
                     onSave = {
                         navController.popBackStack()
                     },
@@ -73,6 +68,8 @@ fun CienMilSaboresNavigation() {
                 )
             }
         }
+
+        // --- El resto de tus composables se mantienen igual ---
 
         composable(Screen.Carrito.route) {
             CarritoScreen()
@@ -86,17 +83,20 @@ fun CienMilSaboresNavigation() {
             LoginScreen(
                 onLoginSuccess = {
                     navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.Login.route) { inclusive = true }
+                        // Limpiamos la pila de navegación para que el usuario no pueda
+                        // volver a la pantalla de login con el botón de "atrás".
+                        popUpTo(navController.graph.startDestinationId) {
+                            inclusive = true
+                        }
                     }
                 },
                 onGoRegister = { navController.navigate(Screen.Registro.route) },
-                onForgotPassword = null // No implementamos esto todavía
+                onForgotPassword = null
             )
         }
 
         composable(Screen.Registro.route) {
             RegisterScreen(
-                userViewModel = userViewModel,
                 onRegisterSuccess = {
                     navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.Registro.route) { inclusive = true }
@@ -116,6 +116,10 @@ fun CienMilSaboresNavigation() {
                 navController = navController,
                 productId = productId
             )
+        }
+
+        composable(Screen.NgrokConfig.route) {
+            NgrokConfigScreen()
         }
     }
 }

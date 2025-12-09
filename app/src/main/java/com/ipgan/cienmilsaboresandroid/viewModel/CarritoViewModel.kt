@@ -26,7 +26,7 @@ class CarritoViewModel : ViewModel() {
     }
 
     private fun calcularTotal() {
-        _total.value = _itemsCarrito.entries.sumOf { (product, qty) -> (product.price * qty).toDouble() }
+        _total.value = _itemsCarrito.entries.sumOf { (product, qty) -> (((product.price)?:0.0 ).toDouble() * qty) }
     }
 
     fun vaciarItems() {

@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,8 +32,8 @@ fun CatalogoScreen(
 ) {
     // 2. OBSERVAMOS EL ESTADO DEL VIEWMODEL DE PRODUCTOS
     // El `val products by ...` observa los cambios en la lista de productos.
-    val products by productViewModel.products
-    val isLoading by productViewModel.isLoading
+    val productsState by productViewModel.products.collectAsState()
+    val isLoading by productViewModel.isLoading.collectAsState()
 
     // 3. CARGAMOS LOS PRODUCTOS CUANDO LA PANTALLA APARECE POR PRIMERA VEZ
     // `LaunchedEffect` ejecuta la corrutina solo una vez.
@@ -57,22 +58,37 @@ fun CatalogoScreen(
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator() // Mostramos una ruedita de carga
             }
-        } else if (products.isNullOrEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(text = "No hay productos disponibles.")
-            }
         } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp) // Espacio entre items
-            ) {
-                items(items = products!!, key = { it.id }) { product ->
-                    ProductItem(
-                        product = product,
-                        onClick = { navController.navigate("detalle/${product.id}") },
-                        // 5. USAMOS EL CARRITOVIEWMODEL PARA AÑADIR PRODUCTOS
-                        onAdd = { carritoViewModel.agregarItems(product) }
-                    )
+            // --- INICIO DE LA CORRECCIÓN ---
+
+            // 1. Creamos una copia local inmutable de la lista.
+            // La nombramos `currentProducts` para diferenciarla.
+            val currentProducts = productsState
+
+            // 2. Comprobamos si la copia local es nula o vacía.
+            if (currentProducts.isNullOrEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(text = "No hay productos disponibles.")
+                }
+            } else {
+                // 3. Usamos la copia local `currentProducts` en el LazyColumn.
+                // Como `currentProducts` es una variable local inmutable (val),
+                // el compilador ahora sabe que no puede ser nula dentro de este bloque.
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(items = currentProducts, key = { product -> product.id ?: product.hashCode() }) { product -> // <--- ¡AQUÍ ESTÁ EL CAMBIO!
+                        ProductItem(
+                            product = product,
+                            onClick = {
+                                product.id?.let { productId ->
+                                    navController.navigate("detalle/$productId")
+                                }
+                            },
+                            onAdd = { carritoViewModel.agregarItems(product) }
+                        )
+                    }
                 }
             }
         }
@@ -95,16 +111,21 @@ fun ProductItem(product: Product, onClick: () -> Unit, onAdd: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
+                // --- INICIO DE LA CORRECCIÓN ---
                 Text(
-                    text = product.name,
+                    // Si product.name es nulo, usamos "Producto sin nombre"
+                    text = product.name ?: "Producto sin nombre", // <--- CAMBIO CLAVE
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "${product.price} CLP", // Agregamos "CLP" para claridad
+                    // Si product.price es nulo, usamos "0.0".
+                    // El operador Elvis (?:) es muy útil aquí.
+                    text = "${product.price ?: 0.0} CLP", // <--- CAMBIO CLAVE
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.primary
                 )
+                // --- FIN DE LA CORRECCIÓN ---
             }
             Spacer(modifier = Modifier.width(16.dp))
             Button(onClick = onAdd) {

@@ -302,13 +302,3 @@ fun PerfilScreen(
     }
 }
 
-// 4. ACTUALIZAMOS LA PREVIEW PARA QUE FUNCIONE
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-private fun PerfilScreenPreview() {
-    CienMilSaboresAndroidTheme {
-        // Para la preview, creamos un usuario falso.
-        val previewUser = User(run = "1-9", name = "Juan Pérez", email = "juan.perez@email.com", password = "123", address = "Av. Siempre Viva 123")
-        PerfilScreen(user = previewUser, onSave = {}, onBackToHome = {})
-    }
-}

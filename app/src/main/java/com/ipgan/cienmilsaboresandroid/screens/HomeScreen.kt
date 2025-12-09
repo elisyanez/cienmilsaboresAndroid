@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -29,30 +30,34 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.ipgan.cienmilsaboresandroid.R
+// 1. IMPORTAMOS EL MODELO USER
+import com.ipgan.cienmilsaboresandroid.model.User
 import com.ipgan.cienmilsaboresandroid.ui.theme.CienMilSaboresAndroidTheme
 
 /**
- * Esta es la pantalla principal de nuestra aplicación.
- *
- * @param isLoggedIn Nos dice si el usuario ha iniciado sesión.
- * @param onProfileClick Es la acción para cuando el usuario presiona el botón de perfil.
- * @param onCartClick Es la acción para cuando el usuario presiona el botón del carrito.
- * @param onCatalogClick Es la acción para cuando el usuario presiona el botón del catálogo.
- * @param onLoginClick Es la acción para navegar a la pantalla de inicio de sesión.
- * @param onLogoutClick Es la acción para cerrar la sesión del usuario.
+ * Pantalla principal. Ahora recibe el objeto User para personalizar la experiencia.
  */
 @Composable
 fun HomeScreen(
-    isLoggedIn: Boolean,
+    // 2. CAMBIAMOS isLoggedIn: Boolean por user: User?
+    user: User?,
     onProfileClick: () -> Unit,
     onCartClick: () -> Unit,
     onCatalogClick: () -> Unit,
     onLoginClick: () -> Unit,
-    onLogoutClick: () -> Unit
+    onLogoutClick: () -> Unit,
+    onNgrokConfigClick: () -> Unit
 ) {
+    // La condición ahora es si el objeto 'user' no es nulo.
+    val isLoggedIn = user != null
+
     Scaffold(
         topBar = {
-            HomeTopAppBar(onProfileClick = onProfileClick, isLoggedIn = isLoggedIn)
+            HomeTopAppBar(
+                onProfileClick = onProfileClick,
+                isLoggedIn = isLoggedIn,
+                onNgrokConfigClick = onNgrokConfigClick
+            )
         }
     ) { innerPadding ->
         Column(
@@ -72,12 +77,14 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // 3. MENSAJE DE BIENVENIDA PERSONALIZADO
             Text(
-                text = "Bienvenido a Pastelería Mil Sabores",
+                // Si el usuario existe, lo saludamos por su nombre. Si no, mostramos el texto genérico.
+                text = if (user != null) "¡Hola, ${user.name}!" else "Bienvenido a Pastelería Mil Sabores",
                 style = MaterialTheme.typography.headlineSmall,
                 textAlign = TextAlign.Center,
             )
-            
+
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
@@ -85,9 +92,7 @@ fun HomeScreen(
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
             )
-
             Spacer(modifier = Modifier.height(24.dp))
-
             Text(
                 text = "Personaliza tu pedido",
                 style = MaterialTheme.typography.titleLarge,
@@ -99,9 +104,7 @@ fun HomeScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center
             )
-
             Spacer(modifier = Modifier.height(24.dp))
-
             Text(
                 text = "Compra fácil y rápida",
                 style = MaterialTheme.typography.titleLarge,
@@ -113,25 +116,20 @@ fun HomeScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center
             )
-
             Spacer(modifier = Modifier.height(24.dp))
-
             Text(
                 text = "Cada bocado debe ser una experiencia única.",
                 style = MaterialTheme.typography.bodyMedium,
                 fontStyle = FontStyle.Italic,
                 textAlign = TextAlign.Center
             )
-
             Spacer(modifier = Modifier.height(32.dp))
-
             Text(
                 text = "¿Qué deseas hacer hoy?",
                 style = MaterialTheme.typography.headlineSmall,
                 textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(16.dp))
-
             Button(
                 onClick = onCatalogClick,
                 modifier = Modifier.fillMaxWidth(0.7f)
@@ -139,7 +137,6 @@ fun HomeScreen(
                 Text("Ver Catálogo")
             }
             Spacer(modifier = Modifier.height(16.dp))
-
             Button(
                 onClick = onCartClick,
                 modifier = Modifier.fillMaxWidth(0.7f)
@@ -147,8 +144,6 @@ fun HomeScreen(
                 Text("Ir al Carrito")
             }
             Spacer(modifier = Modifier.height(16.dp))
-
-            // Aquí definimos los botones condicionales de inicio/cierre de sesión y perfil.
             if (isLoggedIn) {
                 Button(
                     onClick = onProfileClick,
@@ -175,15 +170,13 @@ fun HomeScreen(
         }
     }
 }
-
-/**
- * Esta es la barra de aplicación para nuestra pantalla principal.
- *
- * @param onProfileClick Es la acción para manejar el clic en el ícono de perfil.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun HomeTopAppBar(onProfileClick: () -> Unit, isLoggedIn: Boolean) {
+private fun HomeTopAppBar(
+    onProfileClick: () -> Unit,
+    isLoggedIn: Boolean,
+    onNgrokConfigClick: () -> Unit
+) {
     TopAppBar(
         title = {
             Text(
@@ -192,6 +185,14 @@ private fun HomeTopAppBar(onProfileClick: () -> Unit, isLoggedIn: Boolean) {
             )
         },
         actions = {
+            if (!isLoggedIn) {
+                IconButton(onClick = onNgrokConfigClick) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Configuración de Ngrok"
+                    )
+                }
+            }
             if (isLoggedIn) {
                 IconButton(onClick = onProfileClick) {
                     Icon(
@@ -208,18 +209,20 @@ private fun HomeTopAppBar(onProfileClick: () -> Unit, isLoggedIn: Boolean) {
     )
 }
 
+
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun HomeScreenPreview() {
-    // Hay que envolver la preview en el tema de la app para que se vea bien.
     CienMilSaboresAndroidTheme {
         HomeScreen(
-            isLoggedIn = false,
+            user = null,
             onProfileClick = {},
             onCartClick = {},
             onCatalogClick = {},
             onLoginClick = {},
-            onLogoutClick = {}
+            onLogoutClick = {},
+            onNgrokConfigClick = {}
         )
+
     }
 }

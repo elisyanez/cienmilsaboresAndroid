@@ -47,9 +47,12 @@ fun CarritoScreen(
                         Column {
                             // Asumo que tu modelo Product tiene `name`, `price`, etc.
                             // Si los nombres de las propiedades son nom_prod, precio_prod, ajústalo aquí.
-                            Text(product.name)
+                            Text(text = product.name ?: "Producto sin nombre")
+                            Text("Precio: ${product.price} CLP")
                             Text("Cantidad: $qty")
-                            Text("Subtotal: ${product.price * qty} CLP") // Añadido CLP para claridad
+                            Text(
+                                "Subtotal: ${(product.price ?: 0.0).toDouble()* qty} CLP" // <--- CAMBIO CLAVE
+                            )
                         }
                         // 4. USAMOS LA NUEVA VARIABLE `carritoViewModel`
                         Button(onClick = { carritoViewModel.eliminarItems(product) }) {
@@ -68,22 +71,3 @@ fun CarritoScreen(
         }
     }
 }
-
-// 6. CORREGIMOS LA PREVIEW PARA QUE NO PIDA PARÁMETROS
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun CarritoScreenPreview() {
-    CienMilSaboresAndroidTheme {
-        // La preview ahora llama a CarritoScreen sin parámetros,
-        // pero para que muestre datos, tenemos que crear una instancia del ViewModel
-        // y pasársela explícitamente solo para la preview.
-        val previewViewModel = CarritoViewModel().apply {
-            agregarItems(Product(1, "p-001", "Torta de Chocolate", "Pastel","torta.jpg",15000,true,10))
-            agregarItems(Product(2, "p-002", "Kuchen de Manzana", "Pastel","kuchen.jpg",12000,true,15))
-        }
-        CarritoScreen(carritoViewModel = previewViewModel)
-    }
-}
-
-// El `fakeViewModel` ya no es necesario aquí fuera.
-// val fakeViewModel = ...

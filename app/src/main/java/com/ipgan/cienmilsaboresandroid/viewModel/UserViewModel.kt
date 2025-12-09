@@ -1,56 +1,83 @@
 package com.ipgan.cienmilsaboresandroid.viewModel
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import com.ipgan.cienmilsaboresandroid.config.TokenManager
+import com.ipgan.cienmilsaboresandroid.model.LoginRequest
 import com.ipgan.cienmilsaboresandroid.model.User
 import com.ipgan.cienmilsaboresandroid.repository.UsuarioRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
-class UserViewModel : ViewModel() {
+class UserViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = UsuarioRepository()
+    private val repository = UsuarioRepository(application.applicationContext)
 
     private val _user = MutableStateFlow<User?>(null)
     val user: StateFlow<User?> = _user.asStateFlow()
 
-    // 1. CAMBIAMOS LA FUNCIÓN PARA QUE SEA 'suspend' Y DEVUELVA UN USUARIO O NULO
-    /**
-     * Intenta loguear un usuario usando el repositorio.
-     * Esta función es 'suspend' porque necesita esperar la respuesta de la API.
-     * @return Devuelve el objeto User si el login es exitoso, o null si falla.
-     */
-    suspend fun login(email: String, pass: String): User? {
-        val userList = repository.getUsuarios()
-        val foundUser = userList?.find { it.email == email && it.password == pass }
+    suspend fun login(email: String, pass: String): Boolean {
+        try {
+            val request = LoginRequest(correo = email, password = pass)
 
-        // Si encontramos al usuario, lo guardamos en nuestro estado.
-        _user.value = foundUser
-        return foundUser
+            // 1. Llamamos al endpoint de login.
+            // La respuesta (`LoginResponse`) ya contiene el token Y los datos del usuario.
+            val loginResponse = repository.login(request)
+
+            if (loginResponse.isSuccessful && loginResponse.body() != null) {
+                val responseBody = loginResponse.body()!!
+
+                // 2. Guardamos el token que vino en la respuesta.
+                // Asegúrate que tu LoginResponse tiene un campo `token` o `jwt`.
+                TokenManager.saveToken(getApplication(), responseBody.token)
+
+                // 3. Invalidamos Retrofit para futuras llamadas.
+                com.ipgan.cienmilsaboresandroid.remote.RetrofitInstance2.invalidate()
+
+                // 4. ¡AQUÍ ESTÁ EL CAMBIO CLAVE!
+                // Creamos el objeto `User` directamente desde la respuesta del login,
+                // sin necesidad de hacer otra llamada a la API.
+                val loggedInUser = User(
+                    run = responseBody.run,
+                    name = responseBody.name,
+                    lastName = responseBody.lastName,
+                    email = responseBody.email,
+                    password = "", // La contraseña nunca se guarda en el estado
+                    address = responseBody.address,
+                    role = responseBody.role,
+                    // Asegúrate de que los nombres de las propiedades coincidan
+                    // con los de tu LoginResponse (regionNombre, comunaNombre, etc.).
+                    region = responseBody.region,
+                    commune = responseBody.commune
+                )
+
+                // 5. ACTUALIZAMOS EL ESTADO
+                // Este cambio hará que `LoginScreen` y `HomeScreen` reaccionen.
+                _user.value = loggedInUser
+                return true // ¡Éxito!
+            }
+
+            // Si el login falla, devolvemos false.
+            return false
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return false
+        }
     }
 
-    /**
-     * Para registrar un nuevo usuario usando la API.
-     * La función ahora es 'suspend' porque la operación de red toma tiempo.
-     * @return Devuelve verdadero si se registra bien, falso si no.
-     */
+    // El resto de las funciones (register, logout, updateUser) se mantienen igual.
+
     suspend fun register(user: User): Boolean {
         return repository.saveUsuario(user)
     }
 
-    /**
-     * Para cerrar la sesión del usuario actual.
-     */
     fun logout() {
         _user.value = null
+        TokenManager.clearToken(getApplication())
+        com.ipgan.cienmilsaboresandroid.remote.RetrofitInstance2.invalidate()
     }
 
-    /**
-     * Para actualizar el perfil del usuario que está logueado.
-     * La función ahora es 'suspend' para reflejar la llamada a la API.
-     */
     suspend fun updateUser(updatedUser: User) {
         _user.value?.let { currentUser ->
             val run = currentUser.run

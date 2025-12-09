@@ -34,4 +34,6 @@ class PostViewModel() : ViewModel() {
     init {
         recuperarPost()
     }
+
+
 }

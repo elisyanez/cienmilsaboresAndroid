@@ -3,41 +3,38 @@ package com.ipgan.cienmilsaboresandroid.model
 import com.google.gson.annotations.SerializedName
 
 /**
- * Modelo de datos unificado para el Usuario.
- * Contiene todos los campos necesarios para registro, login, y gestión de administradores.
- * Los campos extra son opcionales para mantener la compatibilidad con el registro simple.
+ * Modelo de datos del Usuario, sincronizado con la entidad 'Usuario' del backend.
+ * Las anotaciones @SerializedName son CRUCIALES para que Gson mapee
+ * correctamente el JSON del backend a las propiedades de esta clase.
  */
 data class User(
-    @SerializedName("id_usu")
-    val id: Int? = null,
-
-    @SerializedName("nom_usu")
-    val name: String,
-
-    @SerializedName("apell_usu")
-    val lastName: String? = null,
-
-    @SerializedName("run_usu")
+    @SerializedName("run")
     val run: String,
 
-    @SerializedName("email_usu")
+    // Le decimos a Gson que el campo "nombre" del JSON debe ir en la variable "name" de Kotlin.
+    @SerializedName("nombre")
+    val name: String,
+
+    // Le decimos a Gson que el campo "apellidos" del JSON debe ir en la variable "lastName".
+    @SerializedName("apellidos")
+    val lastName: String?,
+
+    // Y así con todos los demás campos...
+    @SerializedName("correo")
     val email: String,
 
-    @SerializedName("direccion_usu")
-    val address: String,
-
-    @SerializedName("contra_usu")
+    @SerializedName("password")
     val password: String,
 
-    @SerializedName("tipo_usu")
-    val role: String = "cliente",
+    @SerializedName("direccion")
+    val address: String?,
 
-    @SerializedName("regio_usu")
-    val region: String? = null,
+    @SerializedName("role")
+    val role: String,
 
-    @SerializedName("comuna_usu")
-    val commune: String? = null,
+    @SerializedName("region")
+    val region: String?,
 
-    @SerializedName("foto_usu")
-    val photoUrl: String? = null
+    @SerializedName("comuna")
+    val commune: String?,
 )

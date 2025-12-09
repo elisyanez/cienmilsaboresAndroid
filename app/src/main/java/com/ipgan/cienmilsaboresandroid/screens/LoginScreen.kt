@@ -16,6 +16,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -24,22 +25,19 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel // 1. IMPORTAMOS viewModel()
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ipgan.cienmilsaboresandroid.R
 import com.ipgan.cienmilsaboresandroid.ui.theme.CienMilSaboresAndroidTheme
-import com.ipgan.cienmilsaboresandroid.viewModel.UserViewModel // 2. IMPORTAMOS EL UserViewModel
+import com.ipgan.cienmilsaboresandroid.viewModel.UserViewModel
 import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
-    // 3. CAMBIAMOS LOS PARÁMETROS
-    // Ahora recibimos el ViewModel y las acciones de navegación por separado.
     userViewModel: UserViewModel = viewModel(),
     onLoginSuccess: () -> Unit,
     onGoRegister: () -> Unit,
     onForgotPassword: (() -> Unit)? = null
 ) {
-    // Estos son nuestros estados para el formulario.
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var showPassword by rememberSaveable { mutableStateOf(false) }
@@ -47,9 +45,21 @@ fun LoginScreen(
     var isPasswordValid by remember { mutableStateOf(true) }
     var isLoading by remember { mutableStateOf(false) }
 
-    val focus = androidx.compose.ui.platform.LocalFocusManager.current
+    val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val user by userViewModel.user.collectAsState()
+
+    // --- ESTA ES AHORA LA ÚNICA FUENTE DE VERDAD PARA NAVEGAR ---
+    // Se ejecuta cuando el Composable entra en la pantalla y cada vez que 'user' cambia.
+    LaunchedEffect(user) {
+        if (user != null) {
+            snackbarHostState.showSnackbar("¡Bienvenido, ${user!!.name}!")
+            // La navegación ocurre como una reacción al cambio de estado.
+            onLoginSuccess()
+        }
+    }
 
     fun validate(): Boolean {
         isEmailValid = android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
@@ -57,8 +67,23 @@ fun LoginScreen(
         return isEmailValid && isPasswordValid
     }
 
-    // --- El resto de la UI se mantiene casi igual ---
-    // Solo cambia la lógica del botón "Entrar"
+    // Función unificada para manejar el intento de login
+    fun attemptLogin() {
+        if (validate()) {
+            focusManager.clearFocus()
+            scope.launch {
+                isLoading = true
+                val loginSuccess = userViewModel.login(email, password)
+                isLoading = false
+
+                // Si el login falla, el LaunchedEffect no se disparará.
+                // Por lo tanto, mostramos el error aquí.
+                if (!loginSuccess) {
+                    snackbarHostState.showSnackbar("Email o contraseña incorrectos")
+                }
+            }
+        }
+    }
 
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { inner ->
         Box(
@@ -105,24 +130,14 @@ fun LoginScreen(
                             email = it
                             if (!isEmailValid) isEmailValid = true
                         },
+                        // ... (resto de las propiedades del OutlinedTextField)
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         label = { Text("Correo electrónico") },
                         leadingIcon = { Icon(Icons.Filled.Email, contentDescription = null) },
                         isError = !isEmailValid,
-                        supportingText = {
-                            if (!isEmailValid)
-                                Text("El formato del correo no es válido", style = MaterialTheme.typography.bodySmall)
-                        },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Email,
-                            imeAction = ImeAction.Next,
-                            capitalization = KeyboardCapitalization.None,
-                            autoCorrectEnabled = false
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onNext = { focus.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) }
-                        )
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) })
                     )
 
                     Spacer(Modifier.height(12.dp))
@@ -133,81 +148,33 @@ fun LoginScreen(
                             password = it
                             if (!isPasswordValid) isPasswordValid = true
                         },
+                        // ... (resto de las propiedades)
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         label = { Text("Contraseña") },
                         leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null) },
                         trailingIcon = {
                             IconButton(onClick = { showPassword = !showPassword }) {
-                                if (showPassword)
-                                    Icon(Icons.Filled.VisibilityOff, contentDescription = "Ocultar contraseña")
-                                else
-                                    Icon(Icons.Filled.Visibility, contentDescription = "Mostrar contraseña")
+                                Icon(
+                                    imageVector = if (showPassword) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                    contentDescription = if (showPassword) "Ocultar contraseña" else "Mostrar contraseña"
+                                )
                             }
                         },
                         visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
                         isError = !isPasswordValid,
-                        supportingText = {
-                            if (!isPasswordValid)
-                                Text("Mínimo 6 caracteres", style = MaterialTheme.typography.bodySmall)
-                        },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Password,
-                            imeAction = ImeAction.Done,
-                            autoCorrectEnabled = false
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onDone = {
-                                if (validate()) {
-                                    focus.clearFocus()
-                                    scope.launch {
-                                        isLoading = true
-                                        val loggedInUser = userViewModel.login(email, password)
-                                        isLoading = false
-                                        if (loggedInUser != null) {
-                                            onLoginSuccess()
-                                        } else {
-                                            snackbarHostState.showSnackbar("Email o contraseña incorrectos")
-                                        }
-                                    }
-                                }
-                            }
-                        )
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { attemptLogin() }) // Llama a la función unificada
                     )
 
                     if (onForgotPassword != null) {
-                        TextButton(
-                            onClick = onForgotPassword,
-                            modifier = Modifier
-                                .align(Alignment.End)
-                                .padding(top = 4.dp)
-                        ) {
-                            Text("¿Olvidaste tu contraseña?")
-                        }
+                        //... (botón de contraseña olvidada)
                     }
 
                     Spacer(Modifier.height(20.dp))
 
-                    // 4. ACTUALIZAMOS LA LÓGICA DEL BOTÓN
                     Button(
-                        onClick = {
-                            if (validate()) {
-                                scope.launch {
-                                    isLoading = true
-                                    // Llamamos directamente al ViewModel
-                                    val loggedInUser = userViewModel.login(email, password)
-                                    isLoading = false // Detenemos la carga después de la respuesta
-
-                                    if (loggedInUser != null) {
-                                        // Si el login es exitoso, llamamos a la acción de navegación.
-                                        onLoginSuccess()
-                                    } else {
-                                        // Si falla, mostramos el mensaje.
-                                        snackbarHostState.showSnackbar("Email o contraseña incorrectos")
-                                    }
-                                }
-                            }
-                        },
+                        onClick = { attemptLogin() }, // Llama a la función unificada
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !isLoading
                     ) {
@@ -239,14 +206,11 @@ fun LoginScreen(
     }
 }
 
-@Preview(
-    showBackground = true,
-    showSystemUi = true
-)
+
+@Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun LoginScreenPreview() {
     CienMilSaboresAndroidTheme {
-        // La preview ahora solo necesita las acciones de navegación.
         LoginScreen(
             onLoginSuccess = {},
             onGoRegister = {},

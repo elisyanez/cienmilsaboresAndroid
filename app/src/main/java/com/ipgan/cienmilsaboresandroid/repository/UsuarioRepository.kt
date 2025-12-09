@@ -1,10 +1,14 @@
 package com.ipgan.cienmilsaboresandroid.repository
 
+import android.content.Context
+import com.ipgan.cienmilsaboresandroid.model.LoginRequest
+import com.ipgan.cienmilsaboresandroid.model.LoginResponse
 import com.ipgan.cienmilsaboresandroid.model.User
 import com.ipgan.cienmilsaboresandroid.remote.RetrofitInstance2
+import retrofit2.Response
 
-class UsuarioRepository {
-    private val apiService = RetrofitInstance2.api
+class UsuarioRepository(context: Context) {
+    private val apiService = RetrofitInstance2.getApi(context)
 
     suspend fun getUsuarios(): List<User>? {
         val response = apiService.getUsuarios()
@@ -32,5 +36,13 @@ class UsuarioRepository {
     suspend fun updateUsuario(run: String, usuario: User): Boolean {
         val response = apiService.updateUsuario(run, usuario)
         return response.isSuccessful
+    }
+
+    suspend fun login(request: LoginRequest): Response<LoginResponse> {
+        return apiService.login(request)
+    }
+
+    suspend fun getMyProfile(): Response<User> {
+        return apiService.getMyProfile()
     }
 }
