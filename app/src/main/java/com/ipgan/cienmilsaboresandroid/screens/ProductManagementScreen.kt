@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -25,6 +26,7 @@ import com.ipgan.cienmilsaboresandroid.R
 import com.ipgan.cienmilsaboresandroid.model.Product
 import com.ipgan.cienmilsaboresandroid.navigation.Screen
 import com.ipgan.cienmilsaboresandroid.viewModel.ProductViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,13 +36,51 @@ fun ProductManagementScreen(
 ) {
     val products by productViewModel.products.collectAsState()
     val isLoading by productViewModel.isLoading.collectAsState()
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    // Refresca la lista de productos cada vez que esta pantalla se muestra
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var productToDelete by remember { mutableStateOf<Product?>(null) }
+
     LaunchedEffect(Unit) {
         productViewModel.loadProducts()
     }
 
+    // Diálogo de confirmación de eliminación
+    if (showDeleteDialog && productToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Confirmar Eliminación") },
+            text = { Text("¿Estás seguro de que quieres eliminar el producto '${productToDelete?.name}'?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            val success = productViewModel.deleteProduct(productToDelete!!.id!!)
+                            if (success) {
+                                snackbarHostState.showSnackbar("Producto eliminado correctamente")
+                            } else {
+                                snackbarHostState.showSnackbar("Error al eliminar el producto")
+                            }
+                            showDeleteDialog = false
+                            productToDelete = null
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Eliminar")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { showDeleteDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = { TopAppBar(title = { Text("Gestión de Productos") }) },
         floatingActionButton = {
             FloatingActionButton(onClick = { navController.navigate(Screen.ProductEdit.route) }) {
@@ -64,7 +104,10 @@ fun ProductManagementScreen(
                         onEditClick = {
                             navController.navigate(Screen.ProductEdit.route + "?productId=${it.id}")
                         },
-                        onDeleteClick = { /* TODO: Implementar diálogo de eliminación */ }
+                        onDeleteClick = {
+                            productToDelete = it
+                            showDeleteDialog = true
+                        }
                     )
                 }
             }

@@ -8,7 +8,6 @@ import com.ipgan.cienmilsaboresandroid.repository.ProductsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class ProductViewModel(application: Application) : AndroidViewModel(application) {
@@ -56,11 +55,9 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
         _selectedProduct.value = null
     }
 
-    // --- NUEVAS FUNCIONES DE GESTIÓN ---
     suspend fun createProduct(product: Product): Boolean {
         val success = repository.crearProducto(product)
         if (success) {
-            // Si se crea con éxito, actualizamos la lista local
             loadProducts()
         }
         return success
@@ -70,9 +67,16 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
         if (product.id == null) return false
         val success = repository.updateProducto(product.id, product)
         if (success) {
-            // Si se actualiza con éxito, refrescamos la lista y el producto seleccionado
             loadProducts()
             loadProductById(product.id)
+        }
+        return success
+    }
+
+    suspend fun deleteProduct(productId: String): Boolean {
+        val success = repository.eliminarProducto(productId)
+        if (success) {
+            loadProducts()
         }
         return success
     }
