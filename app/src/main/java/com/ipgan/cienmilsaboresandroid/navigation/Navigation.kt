@@ -10,6 +10,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.ipgan.cienmilsaboresandroid.screens.*
+import com.ipgan.cienmilsaboresandroid.viewModel.CarritoViewModel
 import com.ipgan.cienmilsaboresandroid.viewModel.UserViewModel
 
 sealed class Screen(val route: String) {
@@ -20,7 +21,6 @@ sealed class Screen(val route: String) {
     object Registro : Screen("registro")
     object Catalogo : Screen("catalogo")
     object Detalle : Screen("detalle/{productId}") {
-        // ¡CAMBIO! La ruta ahora espera un String.
         fun createRoute(productId: String) = "detalle/$productId"
     }
     object Splash : Screen("splash")
@@ -30,7 +30,11 @@ sealed class Screen(val route: String) {
 @Composable
 fun CienMilSaboresNavigation() {
     val navController = rememberNavController()
+
+    // 1. CREAMOS LAS INSTANCIAS COMPARTIDAS DE LOS VIEWMODELS
     val userViewModel: UserViewModel = viewModel()
+    val carritoViewModel: CarritoViewModel = viewModel()
+
     val user by userViewModel.user.collectAsState()
 
     NavHost(
@@ -64,12 +68,17 @@ fun CienMilSaboresNavigation() {
             }
         }
 
+        // 2. PASAMOS LA INSTANCIA COMPARTIDA A CARRITOSCREEN
         composable(Screen.Carrito.route) {
-            CarritoScreen()
+            CarritoScreen(carritoViewModel = carritoViewModel)
         }
 
+        // 3. PASAMOS LA INSTANCIA COMPARTIDA A CATALOGOSCREEN
         composable(Screen.Catalogo.route) {
-            CatalogoScreen(navController = navController)
+            CatalogoScreen(
+                navController = navController,
+                carritoViewModel = carritoViewModel
+            )
         }
 
         composable(Screen.Login.route) {
@@ -99,11 +108,10 @@ fun CienMilSaboresNavigation() {
 
         composable(
             route = Screen.Detalle.route,
-            // ¡CAMBIO! El tipo de argumento ahora es String.
             arguments = listOf(navArgument("productId") { type = NavType.StringType })
         ) { backStackEntry ->
-            // ¡CAMBIO! Obtenemos el String y nos aseguramos de que no sea nulo.
             val productId = backStackEntry.arguments?.getString("productId") ?: ""
+            // 4. A la pantalla de detalle también le pasamos el CarritoViewModel
             DetalleScreen(
                 navController = navController,
                 productId = productId
