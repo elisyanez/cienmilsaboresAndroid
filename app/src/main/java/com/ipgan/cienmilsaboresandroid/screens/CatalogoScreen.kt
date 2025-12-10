@@ -16,7 +16,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
@@ -35,8 +34,8 @@ import java.util.Locale
 @Composable
 fun CatalogoScreen(
     navController: NavController,
-    productViewModel: ProductViewModel = viewModel(),
-    carritoViewModel: CarritoViewModel = viewModel()
+    productViewModel: ProductViewModel, // AHORA RECIBE EL VIEWMODEL COMPARTIDO
+    carritoViewModel: CarritoViewModel
 ) {
     val products by productViewModel.products.collectAsState()
     val isLoading by productViewModel.isLoading.collectAsState()
@@ -99,16 +98,15 @@ fun ProductItem(product: Product, onClick: () -> Unit, onAdd: () -> Unit) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            // --- IMAGEN DEL PRODUCTO ---
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(product.imageUrl)
                     .crossfade(true)
                     .build(),
-                placeholder = painterResource(R.drawable.logo_mil_sabores), // Imagen de placeholder
+                placeholder = painterResource(R.drawable.logo_mil_sabores),
                 contentDescription = product.name,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.size(64.dp).clip(CircleShape) // Imagen redonda
+                modifier = Modifier.size(64.dp).clip(CircleShape)
             )
 
             Spacer(modifier = Modifier.width(16.dp))
@@ -130,14 +128,5 @@ fun ProductItem(product: Product, onClick: () -> Unit, onAdd: () -> Unit) {
                 Text("Agregar")
             }
         }
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun CatalogoScreenPreview() {
-    CienMilSaboresAndroidTheme {
-        val navController = rememberNavController()
-        CatalogoScreen(navController = navController)
     }
 }

@@ -4,18 +4,17 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ipgan.cienmilsaboresandroid.model.Product
-import com.ipgan.cienmilsaboresandroid.repository.ProductsRepository // 1. IMPORTAMOS EL REPOSITORIO
+import com.ipgan.cienmilsaboresandroid.repository.ProductsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class ProductViewModel(application: Application) : AndroidViewModel(application) {
 
-    // 2. CREAMOS UNA INSTANCIA DEL REPOSITORIO
     private val repository = ProductsRepository(application.applicationContext)
 
-    // 3. INICIALIZAMOS EL ESTADO CON UNA LISTA VACÍA PARA MAYOR SEGURIDAD
     private val _products = MutableStateFlow<List<Product>>(emptyList())
     val products: StateFlow<List<Product>> = _products.asStateFlow()
 
@@ -25,35 +24,56 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    // 4. ACTUALIZAMOS LA FUNCIÓN PARA USAR EL REPOSITORIO
     fun loadProducts() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                // Obtenemos los productos a través del repositorio
                 _products.value = repository.getProductos() ?: emptyList()
             } catch (e: Exception) {
                 e.printStackTrace()
-                _products.value = emptyList() // En caso de error, lista vacía
+                _products.value = emptyList()
             } finally {
                 _isLoading.value = false
             }
         }
     }
 
-    // 5. ACTUALIZAMOS LA CARGA POR ID PARA USAR STRING Y EL REPOSITORIO
     fun loadProductById(productId: String) {
         viewModelScope.launch {
             _isLoading.value = true
+            _selectedProduct.value = null // Limpiamos antes de cargar
             try {
-                // Obtenemos el producto a través del repositorio
                 _selectedProduct.value = repository.getProductoByCodigo(productId)
             } catch (e: Exception) {
                 e.printStackTrace()
-                _selectedProduct.value = null // En caso de error, producto nulo
             } finally {
                 _isLoading.value = false
             }
         }
+    }
+
+    fun clearSelectedProduct() {
+        _selectedProduct.value = null
+    }
+
+    // --- NUEVAS FUNCIONES DE GESTIÓN ---
+    suspend fun createProduct(product: Product): Boolean {
+        val success = repository.crearProducto(product)
+        if (success) {
+            // Si se crea con éxito, actualizamos la lista local
+            loadProducts()
+        }
+        return success
+    }
+
+    suspend fun updateProduct(product: Product): Boolean {
+        if (product.id == null) return false
+        val success = repository.updateProducto(product.id, product)
+        if (success) {
+            // Si se actualiza con éxito, refrescamos la lista y el producto seleccionado
+            loadProducts()
+            loadProductById(product.id)
+        }
+        return success
     }
 }

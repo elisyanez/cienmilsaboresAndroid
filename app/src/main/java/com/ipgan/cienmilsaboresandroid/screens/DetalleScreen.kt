@@ -12,7 +12,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -28,8 +27,8 @@ import java.util.Locale
 fun DetalleScreen(
     navController: NavController,
     productId: String,
-    productViewModel: ProductViewModel = viewModel(),
-    carritoViewModel: CarritoViewModel = viewModel() // Añadimos el CarritoViewModel
+    productViewModel: ProductViewModel, // AHORA RECIBE EL VIEWMODEL COMPARTIDO
+    carritoViewModel: CarritoViewModel
 ) {
     val product by productViewModel.selectedProduct.collectAsState()
     val isLoading by productViewModel.isLoading.collectAsState()
@@ -55,7 +54,6 @@ fun DetalleScreen(
                     val clpFormat = remember { NumberFormat.getCurrencyInstance(Locale("es", "CL")).apply { maximumFractionDigits = 0 } }
 
                     Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                        // --- IMAGEN DEL PRODUCTO ---
                         AsyncImage(
                             model = ImageRequest.Builder(LocalContext.current)
                                 .data(p.imageUrl)

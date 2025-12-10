@@ -11,6 +11,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.ipgan.cienmilsaboresandroid.screens.*
 import com.ipgan.cienmilsaboresandroid.viewModel.CarritoViewModel
+import com.ipgan.cienmilsaboresandroid.viewModel.ProductViewModel
 import com.ipgan.cienmilsaboresandroid.viewModel.UserViewModel
 
 sealed class Screen(val route: String) {
@@ -25,17 +26,20 @@ sealed class Screen(val route: String) {
     }
     object Splash : Screen("splash")
     object NgrokConfig : Screen("ngrok_config")
-    // --- NUEVAS RUTAS DE ADMINISTRADOR ---
     object UserManagement : Screen("user_management")
     object ProductManagement : Screen("product_management")
+    // --- RUTA PARA CREAR/EDITAR PRODUCTOS ---
+    object ProductEdit : Screen("product_edit")
 }
 
 @Composable
 fun CienMilSaboresNavigation() {
     val navController = rememberNavController()
 
+    // --- VIEWMODELS COMPARTIDOS ---
     val userViewModel: UserViewModel = viewModel()
     val carritoViewModel: CarritoViewModel = viewModel()
+    val productViewModel: ProductViewModel = viewModel()
 
     val user by userViewModel.user.collectAsState()
 
@@ -56,19 +60,29 @@ fun CienMilSaboresNavigation() {
                 onLoginClick = { navController.navigate(Screen.Login.route) },
                 onLogoutClick = { userViewModel.logout() },
                 onNgrokConfigClick = { navController.navigate(Screen.NgrokConfig.route) },
-                // --- CONECTAMOS LOS BOTONES DE ADMIN A LAS NUEVAS RUTAS ---
                 onUserManagementClick = { navController.navigate(Screen.UserManagement.route) },
                 onProductManagementClick = { navController.navigate(Screen.ProductManagement.route) }
             )
         }
 
-        // --- COMPOSABLES DE LAS NUEVAS PANTALLAS ---
         composable(Screen.UserManagement.route) {
              UserManagementScreen(userViewModel = userViewModel)
         }
 
         composable(Screen.ProductManagement.route) {
-             ProductManagementScreen(navController = navController)
+             ProductManagementScreen(navController = navController, productViewModel = productViewModel)
+        }
+
+        // --- COMPOSABLE PARA LA PANTALLA DE EDICIÓN ---
+        composable(
+            route = Screen.ProductEdit.route + "?productId={productId}",
+            arguments = listOf(navArgument("productId") { type = NavType.StringType; nullable = true })
+        ) { backStackEntry ->
+            ProductEditScreen(
+                navController = navController,
+                productViewModel = productViewModel,
+                productId = backStackEntry.arguments?.getString("productId")
+            )
         }
 
         composable(Screen.Perfil.route) {
@@ -87,20 +101,13 @@ fun CienMilSaboresNavigation() {
         }
 
         composable(Screen.Catalogo.route) {
-            CatalogoScreen(
-                navController = navController,
-                carritoViewModel = carritoViewModel
-            )
+            CatalogoScreen(navController = navController, carritoViewModel = carritoViewModel, productViewModel = productViewModel)
         }
 
         composable(Screen.Login.route) {
             LoginScreen(
                 userViewModel = userViewModel,
-                onLoginSuccess = {
-                    navController.navigate(Screen.Home.route) {
-                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
-                    }
-                },
+                onLoginSuccess = { navController.navigate(Screen.Home.route) { popUpTo(navController.graph.startDestinationId) { inclusive = true } } },
                 onGoRegister = { navController.navigate(Screen.Registro.route) },
                 onForgotPassword = null
             )
@@ -108,11 +115,7 @@ fun CienMilSaboresNavigation() {
 
         composable(Screen.Registro.route) {
             RegisterScreen(
-                onRegisterSuccess = {
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(Screen.Registro.route) { inclusive = true }
-                    }
-                },
+                onRegisterSuccess = { navController.navigate(Screen.Login.route) { popUpTo(Screen.Registro.route) { inclusive = true } } },
                 onGoLogin = { navController.navigate(Screen.Login.route) },
                 onBack = { navController.popBackStack() }
             )
@@ -126,7 +129,8 @@ fun CienMilSaboresNavigation() {
             DetalleScreen(
                 navController = navController,
                 productId = productId,
-                carritoViewModel = carritoViewModel
+                carritoViewModel = carritoViewModel,
+                productViewModel = productViewModel
             )
         }
 
