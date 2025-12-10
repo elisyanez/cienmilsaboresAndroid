@@ -8,35 +8,26 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ipgan.cienmilsaboresandroid.R
 import com.ipgan.cienmilsaboresandroid.model.User
-import com.ipgan.cienmilsaboresandroid.ui.theme.CienMilSaboresAndroidTheme
 import com.ipgan.cienmilsaboresandroid.viewModel.UserViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PerfilScreen(
-    // 1. RECIBIMOS EL VIEWMODEL Y LOS DATOS DEL USUARIO
-    userViewModel: UserViewModel = viewModel(),
-    user: User, // Recibimos el usuario que ya está logueado
+    userViewModel: UserViewModel,
+    user: User,
     onSave: () -> Unit,
     onBackToHome: () -> Unit
 ) {
-    // 2. INICIALIZAMOS LOS CAMPOS CON LOS DATOS REALES DEL USUARIO
-    // Usamos 'LaunchedEffect' para asegurarnos de que los campos se llenen
-    // solo una vez cuando el composable aparece.
     var nombres by rememberSaveable { mutableStateOf("") }
     var apellidos by rememberSaveable { mutableStateOf("") }
     var correo by rememberSaveable { mutableStateOf("") }
@@ -46,30 +37,35 @@ fun PerfilScreen(
     var nuevaPassword by rememberSaveable { mutableStateOf("") }
     var showPass by rememberSaveable { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
+    var isNewPasswordValid by remember { mutableStateOf(true) }
 
+    // 1. OBTENEMOS LAS LISTAS DEL VIEWMODEL
+    val regiones by userViewModel.regiones.collectAsState()
+    val allComunas by userViewModel.comunas.collectAsState()
+
+    // Poblamos los campos cuando el usuario cambia
     LaunchedEffect(user) {
         nombres = user.name.split(" ").firstOrNull() ?: ""
         apellidos = user.name.split(" ").drop(1).joinToString(" ")
         correo = user.email
-        // Aquí puedes agregar la lógica para extraer región, comuna y dirección si estuvieran en un solo campo.
-        // Por ahora, lo dejo como podrías manejarlo si vinieran separados.
         direccion = user.address ?: ""
+        region = user.region ?: ""
+        comuna = user.commune ?: ""
     }
 
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // --- Listas para los desplegables (esto se mantiene igual) ---
-    val regiones = listOf("Región Metropolitana", "Valparaíso", "Biobío")
-    val comunasRM = listOf("Santiago", "Providencia", "Las Condes")
-    val comunasV  = listOf("Valparaíso", "Viña del Mar", "Quilpué")
-    val comunasB  = listOf("Concepción", "Talcahuano", "Chiguayante")
-
-    val comunasDisponibles = when (region) {
-        "Región Metropolitana" -> comunasRM
-        "Valparaíso" -> comunasV
-        "Biobío" -> comunasB
-        else -> emptyList()
+    // 2. FILTRAMOS LAS COMUNAS BASADO EN LA REGIÓN SELECCIONADA
+    val comunasDisponibles by remember(region, allComunas) {
+        derivedStateOf {
+            if (region.isNotBlank()) {
+                val selectedRegion = regiones.find { it.nombre == region }
+                allComunas.filter { it.regionCodigo == selectedRegion?.codigo }
+            } else {
+                emptyList()
+            }
+        }
     }
 
     var regionExpanded by remember { mutableStateOf(false) }
@@ -98,24 +94,21 @@ fun PerfilScreen(
                         .verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // --- La UI se mantiene igual, solo cambia el botón de guardar ---
+                    // --- CAMPOS DE TEXTO (NOMBRES, APELLIDOS, ETC.) ---
+                    // (Se mantienen igual que antes)
                     Image(
                         painter = painterResource(id = R.drawable.logo_mil_sabores),
                         contentDescription = "Mil Sabores",
                         modifier = Modifier.size(88.dp)
                     )
-
                     Spacer(Modifier.height(12.dp))
-
                     Text(text = "Mi Perfil", style = MaterialTheme.typography.headlineSmall)
                     Text(
                         text = "Actualiza tus datos personales",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-
                     Spacer(Modifier.height(24.dp))
-
                     OutlinedTextField(
                         value = nombres,
                         onValueChange = { nombres = it },
@@ -125,7 +118,6 @@ fun PerfilScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(Modifier.height(12.dp))
-
                     OutlinedTextField(
                         value = apellidos,
                         onValueChange = { apellidos = it },
@@ -135,7 +127,6 @@ fun PerfilScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(Modifier.height(12.dp))
-
                     OutlinedTextField(
                         value = correo,
                         onValueChange = { correo = it },
@@ -143,15 +134,12 @@ fun PerfilScreen(
                         leadingIcon = { Icon(Icons.Filled.Email, contentDescription = null) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        readOnly = true, // El correo y el RUN no deberían ser editables.
+                        readOnly = true,
                         enabled = false
                     )
-
-                    // ... (El resto de los campos: región, comuna, dirección, contraseña)
-                    // ... El código para los desplegables y otros TextFields va aquí...
-                    // (Omitido por brevedad, es el mismo que ya tenías)
                     Spacer(Modifier.height(12.dp))
 
+                    // --- 3. MENÚ DE REGIONES (AHORA DINÁMICO) ---
                     ExposedDropdownMenuBox(
                         expanded = regionExpanded,
                         onExpandedChange = { regionExpanded = !regionExpanded },
@@ -165,20 +153,18 @@ fun PerfilScreen(
                             trailingIcon = {
                                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = regionExpanded)
                             },
-                            modifier = Modifier
-                                .menuAnchor()
-                                .fillMaxWidth()
+                            modifier = Modifier.menuAnchor().fillMaxWidth()
                         )
                         ExposedDropdownMenu(
                             expanded = regionExpanded,
                             onDismissRequest = { regionExpanded = false }
                         ) {
-                            regiones.forEach {
+                            regiones.forEach { regionDto ->
                                 DropdownMenuItem(
-                                    text = { Text(it) },
+                                    text = { Text(regionDto.nombre) },
                                     onClick = {
-                                        region = it
-                                        comuna = ""
+                                        region = regionDto.nombre
+                                        comuna = "" // Limpiamos la comuna al cambiar de región
                                         regionExpanded = false
                                     }
                                 )
@@ -188,6 +174,7 @@ fun PerfilScreen(
 
                     Spacer(Modifier.height(12.dp))
 
+                    // --- 4. MENÚ DE COMUNAS (AHORA DINÁMICO) ---
                     ExposedDropdownMenuBox(
                         expanded = comunaExpanded,
                         onExpandedChange = {
@@ -204,22 +191,19 @@ fun PerfilScreen(
                             trailingIcon = {
                                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = comunaExpanded)
                             },
-                            modifier = Modifier
-                                .menuAnchor()
-                                .fillMaxWidth()
+                            modifier = Modifier.menuAnchor().fillMaxWidth()
                         )
                         ExposedDropdownMenu(
                             expanded = comunaExpanded,
                             onDismissRequest = { comunaExpanded = false }
                         ) {
-                            comunasDisponibles.forEach {
+                            comunasDisponibles.forEach { comunaDto ->
                                 DropdownMenuItem(
-                                    text = { Text(it) },
+                                    text = { Text(comunaDto.nombre) },
                                     onClick = {
-                                        comuna = it
+                                        comuna = comunaDto.nombre
                                         comunaExpanded = false
                                     }
-
                                 )
                             }
                         }
@@ -227,6 +211,8 @@ fun PerfilScreen(
 
                     Spacer(Modifier.height(12.dp))
 
+                    // --- OTROS CAMPOS Y BOTÓN DE GUARDAR ---
+                    // (Se mantienen igual que antes)
                     OutlinedTextField(
                         value = direccion,
                         onValueChange = { direccion = it },
@@ -235,10 +221,12 @@ fun PerfilScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(Modifier.height(12.dp))
-
                     OutlinedTextField(
                         value = nuevaPassword,
-                        onValueChange = { nuevaPassword = it },
+                        onValueChange = {
+                            nuevaPassword = it
+                            isNewPasswordValid = true // Resetea el error al escribir
+                        },
                         label = { Text("Nueva contraseña (opcional)") },
                         leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null) },
                         trailingIcon = {
@@ -248,32 +236,38 @@ fun PerfilScreen(
                         },
                         visualTransformation = if (showPass) VisualTransformation.None else PasswordVisualTransformation(),
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        isError = !isNewPasswordValid,
+                        supportingText = {
+                            if (!isNewPasswordValid) {
+                                Text("Debe tener al menos 6 caracteres")
+                            }
+                        }
                     )
-
-
                     Spacer(Modifier.height(24.dp))
-
-                    // 3. IMPLEMENTAMOS LA LÓGICA DEL BOTÓN
                     Button(
                         onClick = {
-                            scope.launch {
-                                isLoading = true
-                                // Creamos un nuevo objeto User con los datos actualizados del formulario
-                                val updatedUser = user.copy(
-                                    name = "$nombres $apellidos".trim(),
-                                    email = correo, // El email no cambia
-                                    address = "$direccion, $comuna, $region".trim(),
-                                    // Si hay una nueva contraseña, la usamos, si no, mantenemos la original.
-                                    password = if (nuevaPassword.isNotBlank()) nuevaPassword else user.password
-                                )
+                            val isPasswordOk = !(nuevaPassword.isNotBlank() && nuevaPassword.length < 6)
+                            isNewPasswordValid = isPasswordOk
 
-                                // Llamamos a la función suspend del ViewModel
-                                userViewModel.updateUser(updatedUser)
+                            if (isPasswordOk) {
+                                scope.launch {
+                                    isLoading = true
+                                    val updatedUser = user.copy(
+                                        name = "$nombres $apellidos".trim(),
+                                        email = correo,
+                                        address = direccion,
+                                        region = region,
+                                        commune = comuna,
+                                        password = nuevaPassword
+                                    )
 
-                                isLoading = false
-                                snackbarHostState.showSnackbar("Perfil actualizado correctamente")
-                                onSave() // Navegamos hacia atrás
+                                    userViewModel.updateUser(updatedUser)
+
+                                    isLoading = false
+                                    snackbarHostState.showSnackbar("Perfil actualizado correctamente")
+                                    onSave()
+                                }
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -285,11 +279,9 @@ fun PerfilScreen(
                             Text("Guardar cambios")
                         }
                     }
-
                     Spacer(Modifier.height(8.dp))
                     HorizontalDivider()
                     Spacer(Modifier.height(8.dp))
-
                     TextButton(
                         onClick = onBackToHome,
                         modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -301,4 +293,3 @@ fun PerfilScreen(
         }
     }
 }
-

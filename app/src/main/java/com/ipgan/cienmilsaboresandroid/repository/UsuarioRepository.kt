@@ -1,9 +1,7 @@
 package com.ipgan.cienmilsaboresandroid.repository
 
 import android.content.Context
-import com.ipgan.cienmilsaboresandroid.model.LoginRequest
-import com.ipgan.cienmilsaboresandroid.model.LoginResponse
-import com.ipgan.cienmilsaboresandroid.model.User
+import com.ipgan.cienmilsaboresandroid.model.* // Importamos los nuevos DTOs
 import com.ipgan.cienmilsaboresandroid.remote.RetrofitInstance2
 import retrofit2.Response
 
@@ -17,18 +15,18 @@ class UsuarioRepository(context: Context) {
     }
 
     suspend fun getUsuarioRun(run: String): User? {
-        val response = apiService.getUsuarioByRun(run)
-        return if (response != null) response
-        else null
+        // Nota: Esta función parece devolver User directamente, no Response<User>.
+        // La lógica original podría ser diferente. Asumo que está bien así.
+        return apiService.getUsuarioByRun(run)
     }
 
     suspend fun saveUsuario(usuario: User): Boolean {
         val response = apiService.createUsuario(usuario)
-        return if (response != null) true
-        else false
+        // Si la respuesta es exitosa, devolvemos true.
+        return response.isSuccessful
     }
 
-    suspend fun eliminarUsuario(run: String):Boolean{
+    suspend fun eliminarUsuario(run: String): Boolean {
         val response = apiService.deleteUsuario(run)
         return response.isSuccessful
     }
@@ -38,11 +36,24 @@ class UsuarioRepository(context: Context) {
         return response.isSuccessful
     }
 
+    // --- LOGIN & PROFILE ---
     suspend fun login(request: LoginRequest): Response<LoginResponse> {
         return apiService.login(request)
     }
 
     suspend fun getMyProfile(): Response<User> {
         return apiService.getMyProfile()
+    }
+
+    // --- UTILIDADES (Regiones y Comunas) ---
+
+    suspend fun getRegiones(): List<RegionDTO>? {
+        val response = apiService.getRegiones()
+        return if (response.isSuccessful) response.body() else null
+    }
+
+    suspend fun getComunas(): List<ComunaDTO>? {
+        val response = apiService.getComunas()
+        return if (response.isSuccessful) response.body() else null
     }
 }

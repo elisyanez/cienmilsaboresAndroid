@@ -1,7 +1,7 @@
 package com.ipgan.cienmilsaboresandroid.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState // 1. ASEGÚRATE DE TENER ESTA IMPORTACIÓN
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -29,6 +29,7 @@ sealed class Screen(val route: String) {
 @Composable
 fun CienMilSaboresNavigation() {
     val navController = rememberNavController()
+    // Este ViewModel se comparte entre todas las pantallas del NavHost
     val userViewModel: UserViewModel = viewModel()
 
     val user by userViewModel.user.collectAsState()
@@ -43,7 +44,7 @@ fun CienMilSaboresNavigation() {
 
         composable(Screen.Home.route) {
             HomeScreen(
-                user = user, // <--- ESTE ES EL CAMBIO CLAVE
+                user = user,
                 onProfileClick = { navController.navigate(Screen.Perfil.route) },
                 onCartClick = { navController.navigate(Screen.Carrito.route) },
                 onCatalogClick = { navController.navigate(Screen.Catalogo.route) },
@@ -54,7 +55,6 @@ fun CienMilSaboresNavigation() {
         }
 
         composable(Screen.Perfil.route) {
-            // La lógica aquí es correcta. Si no hay usuario, no se entra a Perfil.
             user?.let { loggedInUser ->
                 PerfilScreen(
                     userViewModel = userViewModel,
@@ -69,8 +69,6 @@ fun CienMilSaboresNavigation() {
             }
         }
 
-        // --- El resto de tus composables se mantienen igual ---
-
         composable(Screen.Carrito.route) {
             CarritoScreen()
         }
@@ -80,11 +78,11 @@ fun CienMilSaboresNavigation() {
         }
 
         composable(Screen.Login.route) {
+            // AHORA SÍ LE PASAMOS EL VIEWMODEL COMPARTIDO
             LoginScreen(
+                userViewModel = userViewModel,
                 onLoginSuccess = {
                     navController.navigate(Screen.Home.route) {
-                        // Limpiamos la pila de navegación para que el usuario no pueda
-                        // volver a la pantalla de login con el botón de "atrás".
                         popUpTo(navController.graph.startDestinationId) {
                             inclusive = true
                         }

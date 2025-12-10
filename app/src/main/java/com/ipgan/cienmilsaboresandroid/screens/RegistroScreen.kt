@@ -2,45 +2,14 @@ package com.ipgan.cienmilsaboresandroid.screens
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBox
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -55,18 +24,21 @@ import com.ipgan.cienmilsaboresandroid.ui.theme.CienMilSaboresAndroidTheme
 import com.ipgan.cienmilsaboresandroid.viewModel.UserViewModel
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
-    // 1. CAMBIAMOS LA FIRMA PARA USAR viewModel() POR DEFECTO
     userViewModel: UserViewModel = viewModel(),
     onRegisterSuccess: () -> Unit,
     onGoLogin: () -> Unit,
     onBack: () -> Unit
 ) {
-    var name by rememberSaveable { mutableStateOf("") }
     var run by rememberSaveable { mutableStateOf("") }
+    var nombres by rememberSaveable { mutableStateOf("") }
+    var apellidos by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
-    var address by rememberSaveable { mutableStateOf("") }
+    var region by rememberSaveable { mutableStateOf("") }
+    var comuna by rememberSaveable { mutableStateOf("") }
+    var direccion by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var showPassword by rememberSaveable { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
@@ -74,13 +46,34 @@ fun RegisterScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // 1. OBTENEMOS LAS LISTAS DEL VIEWMODEL
+    val regiones by userViewModel.regiones.collectAsState()
+    val allComunas by userViewModel.comunas.collectAsState()
+
+    // 2. FILTRAMOS LAS COMUNAS BASADO EN LA REGIÓN SELECCIONADA
+    val comunasDisponibles by remember(region, allComunas) {
+        derivedStateOf {
+            if (region.isNotBlank()) {
+                val selectedRegion = regiones.find { it.nombre == region }
+                allComunas.filter { it.regionCodigo == selectedRegion?.codigo }
+            } else {
+                emptyList()
+            }
+        }
+    }
+
+    var regionExpanded by remember { mutableStateOf(false) }
+    var comunaExpanded by remember { mutableStateOf(false) }
+
     fun validate(): Boolean {
-        // Validación un poco más robusta para el RUN
         val cleanRun = run.replace(".", "").replace("-", "")
         return cleanRun.length in 8..9 &&
-                name.isNotBlank() &&
+                nombres.isNotBlank() &&
+                apellidos.isNotBlank() &&
                 android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() &&
-                address.isNotBlank() &&
+                region.isNotBlank() &&
+                comuna.isNotBlank() &&
+                direccion.isNotBlank() &&
                 password.length >= 6
     }
 
@@ -113,10 +106,7 @@ fun RegisterScreen(
 
                     Spacer(Modifier.height(12.dp))
 
-                    Text(
-                        text = "Crear cuenta",
-                        style = MaterialTheme.typography.headlineSmall
-                    )
+                    Text(text = "Crear cuenta", style = MaterialTheme.typography.headlineSmall)
                     Text(
                         text = "Ingresa tus datos para registrarte",
                         style = MaterialTheme.typography.bodyMedium,
@@ -125,6 +115,7 @@ fun RegisterScreen(
 
                     Spacer(Modifier.height(24.dp))
 
+                    // --- CAMPOS DE TEXTO ACTUALIZADOS ---
                     OutlinedTextField(
                         value = run,
                         onValueChange = { run = it },
@@ -136,9 +127,19 @@ fun RegisterScreen(
                     Spacer(Modifier.height(12.dp))
 
                     OutlinedTextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        label = { Text("Nombre") },
+                        value = nombres,
+                        onValueChange = { nombres = it },
+                        label = { Text("Nombres") },
+                        leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = apellidos,
+                        onValueChange = { apellidos = it },
+                        label = { Text("Apellidos") },
                         leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
@@ -155,10 +156,76 @@ fun RegisterScreen(
                     )
                     Spacer(Modifier.height(12.dp))
 
+                    // --- 3. MENÚ DE REGIONES (DINÁMICO) ---
+                    ExposedDropdownMenuBox(
+                        expanded = regionExpanded,
+                        onExpandedChange = { regionExpanded = !regionExpanded },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        OutlinedTextField(
+                            value = if (region.isBlank()) "Seleccione región" else region,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Región") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = regionExpanded) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = regionExpanded,
+                            onDismissRequest = { regionExpanded = false }
+                        ) {
+                            regiones.forEach { regionDto ->
+                                DropdownMenuItem(
+                                    text = { Text(regionDto.nombre) },
+                                    onClick = {
+                                        region = regionDto.nombre
+                                        comuna = ""
+                                        regionExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    // --- 4. MENÚ DE COMUNAS (DINÁMICO) ---
+                    ExposedDropdownMenuBox(
+                        expanded = comunaExpanded,
+                        onExpandedChange = { if (region.isNotBlank()) comunaExpanded = !comunaExpanded },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        OutlinedTextField(
+                            value = if (comuna.isBlank()) "Seleccione comuna" else comuna,
+                            onValueChange = {},
+                            readOnly = true,
+                            enabled = region.isNotBlank(),
+                            label = { Text("Comuna") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = comunaExpanded) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = comunaExpanded,
+                            onDismissRequest = { comunaExpanded = false }
+                        ) {
+                            comunasDisponibles.forEach { comunaDto ->
+                                DropdownMenuItem(
+                                    text = { Text(comunaDto.nombre) },
+                                    onClick = {
+                                        comuna = comunaDto.nombre
+                                        comunaExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
                     OutlinedTextField(
-                        value = address,
-                        onValueChange = { address = it },
-                        label = { Text("Dirección") },
+                        value = direccion,
+                        onValueChange = { direccion = it },
+                        label = { Text("Dirección (calle y número)") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -189,7 +256,18 @@ fun RegisterScreen(
                             if (validate()) {
                                 scope.launch {
                                     isLoading = true
-                                    val newUser = User(run= run, name = name, email = email, address = address, password = password, lastName = "", region = "REGION_METROPOLITANA", commune = "SANTIAGO", role = "cliente")
+                                    // 5. CREAMOS EL USUARIO CON LOS NUEVOS CAMPOS
+                                    val newUser = User(
+                                        run = run,
+                                        name = nombres,
+                                        lastName = apellidos,
+                                        email = email,
+                                        address = direccion,
+                                        region = region,
+                                        commune = comuna,
+                                        password = password,
+                                        role = "cliente" // Rol por defecto
+                                    )
                                     val success = userViewModel.register(newUser)
                                     if (success) {
                                         snackbarHostState.showSnackbar("Registro exitoso")
@@ -245,8 +323,6 @@ fun RegisterScreen(
 @Composable
 private fun RegisterScreenPreview() {
     CienMilSaboresAndroidTheme {
-        // 2. AHORA LLAMAMOS A LA FUNCIÓN SIN EL VIEWMODEL
-        // La preview funcionará porque `viewModel()` sabe cómo manejarla.
         RegisterScreen(
             onRegisterSuccess = {},
             onGoLogin = {},

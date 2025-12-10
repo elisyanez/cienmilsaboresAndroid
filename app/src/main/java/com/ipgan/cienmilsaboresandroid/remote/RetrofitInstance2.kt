@@ -9,6 +9,10 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 import com.ipgan.cienmilsaboresandroid.config.TokenManager // <-- 1. IMPORTAMOS TOKEN MANAGER
 import okhttp3.logging.HttpLoggingInterceptor
+import java.security.cert.X509Certificate
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
 
 object RetrofitInstance2 {
 
@@ -40,9 +44,22 @@ object RetrofitInstance2 {
                 chain.proceed(requestBuilder.build())
             }
 
+            val trustAllCerts = arrayOf<TrustManager>(
+                object : X509TrustManager {
+                    override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) {}
+                    override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {}
+                    override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+                }
+            )
+            val sslContext = SSLContext.getInstance("SSL")
+            sslContext.init(null, trustAllCerts, java.security.SecureRandom())
+            val sslSocketFactory = sslContext.socketFactory
+
             // 3. AÑADIMOS EL INTERCEPTOR AL CLIENTE HTTP
 
             val client = OkHttpClient.Builder()
+                .sslSocketFactory(sslSocketFactory, trustAllCerts[0] as X509TrustManager)
+                .hostnameVerifier { _, _ -> true }
                 .addInterceptor(authInterceptor) // <-- LO AÑADIMOS AQUÍ
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
