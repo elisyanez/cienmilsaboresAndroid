@@ -11,6 +11,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.ipgan.cienmilsaboresandroid.screens.*
 import com.ipgan.cienmilsaboresandroid.viewModel.CarritoViewModel
+import com.ipgan.cienmilsaboresandroid.viewModel.PedidoViewModel
 import com.ipgan.cienmilsaboresandroid.viewModel.ProductViewModel
 import com.ipgan.cienmilsaboresandroid.viewModel.UserViewModel
 
@@ -28,18 +29,26 @@ sealed class Screen(val route: String) {
     object NgrokConfig : Screen("ngrok_config")
     object UserManagement : Screen("user_management")
     object ProductManagement : Screen("product_management")
-    // --- RUTA PARA CREAR/EDITAR PRODUCTOS ---
     object ProductEdit : Screen("product_edit")
+
+    // --- NUEVAS RUTAS DE PEDIDOS ---
+    object ConfirmarPedido : Screen("confirmar_pedido")
+    object MisPedidos : Screen("mis_pedidos")
+    object AdminPedidos : Screen("admin_pedidos")
+    object PedidoDetalle : Screen("pedido_detalle/{pedidoId}") {
+        fun createRoute(pedidoId: Long) = "pedido_detalle/$pedidoId"
+    }
 }
 
 @Composable
 fun CienMilSaboresNavigation() {
     val navController = rememberNavController()
 
-    // --- VIEWMODELS COMPARTIDOS ---
+    // --- VIEWMODELS ---
     val userViewModel: UserViewModel = viewModel()
     val carritoViewModel: CarritoViewModel = viewModel()
     val productViewModel: ProductViewModel = viewModel()
+    val pedidoViewModel: PedidoViewModel = viewModel()
 
     val user by userViewModel.user.collectAsState()
 
@@ -61,7 +70,9 @@ fun CienMilSaboresNavigation() {
                 onLogoutClick = { userViewModel.logout() },
                 onNgrokConfigClick = { navController.navigate(Screen.NgrokConfig.route) },
                 onUserManagementClick = { navController.navigate(Screen.UserManagement.route) },
-                onProductManagementClick = { navController.navigate(Screen.ProductManagement.route) }
+                onProductManagementClick = { navController.navigate(Screen.ProductManagement.route) },
+                onMisPedidosClick = { navController.navigate(Screen.MisPedidos.route) },
+                onAdminPedidosClick = { navController.navigate(Screen.AdminPedidos.route) }
             )
         }
 
@@ -73,7 +84,6 @@ fun CienMilSaboresNavigation() {
              ProductManagementScreen(navController = navController, productViewModel = productViewModel)
         }
 
-        // --- COMPOSABLE PARA LA PANTALLA DE EDICIÓN ---
         composable(
             route = Screen.ProductEdit.route + "?productId={productId}",
             arguments = listOf(navArgument("productId") { type = NavType.StringType; nullable = true })
@@ -97,7 +107,10 @@ fun CienMilSaboresNavigation() {
         }
 
         composable(Screen.Carrito.route) {
-            CarritoScreen(carritoViewModel = carritoViewModel)
+             CarritoScreen(
+                navController = navController,
+                carritoViewModel = carritoViewModel
+            )
         }
 
         composable(Screen.Catalogo.route) {
@@ -136,6 +149,32 @@ fun CienMilSaboresNavigation() {
 
         composable(Screen.NgrokConfig.route) {
             NgrokConfigScreen()
+        }
+
+        // --- NAVEGACIÓN DE PEDIDOS ---
+        composable(Screen.ConfirmarPedido.route) {
+            ConfirmarPedidoScreen(
+                navController = navController,
+                userViewModel = userViewModel,
+                carritoViewModel = carritoViewModel,
+                pedidoViewModel = pedidoViewModel
+            )
+        }
+
+        composable(Screen.MisPedidos.route) {
+            user?.let { MisPedidosScreen(navController, pedidoViewModel, it.run) }
+        }
+
+        composable(Screen.AdminPedidos.route) {
+             AdminPedidosScreen(navController, pedidoViewModel)
+        }
+
+        composable(
+            route = Screen.PedidoDetalle.route,
+            arguments = listOf(navArgument("pedidoId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val pedidoId = backStackEntry.arguments?.getLong("pedidoId")
+            // Aquí necesitarás una pantalla de detalle de pedido
         }
     }
 }

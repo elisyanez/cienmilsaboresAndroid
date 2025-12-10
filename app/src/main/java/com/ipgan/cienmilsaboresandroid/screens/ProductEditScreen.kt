@@ -216,10 +216,6 @@ fun ProductEditScreen(
             OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Descripción") }, modifier = Modifier.fillMaxWidth(), maxLines = 4)
             Spacer(modifier = Modifier.height(8.dp))
 
-            // El campo de URL de imagen ya no es necesario, lo maneja la cámara
-            // OutlinedTextField(value = imageUrl, onValueChange = { imageUrl = it }, label = { Text("URL de la Imagen") }, modifier = Modifier.fillMaxWidth())
-            // Spacer(modifier = Modifier.height(8.dp))
-
             Row(Modifier.fillMaxWidth()) {
                 OutlinedTextField(value = price, onValueChange = { price = it }, label = { Text("Precio") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f))
                 Spacer(modifier = Modifier.width(8.dp))
@@ -234,12 +230,13 @@ fun ProductEditScreen(
             Button(
                 onClick = {
                     scope.launch {
-                        isLoading = true
+                        val priceDouble = price.toDoubleOrNull()
+                        if (priceDouble == null || priceDouble <= 0) {
+                            snackbarHostState.showSnackbar("El precio debe ser un número mayor a cero.")
+                            return@launch
+                        }
 
-                        // TODO: Implementar la subida de la imagen a un servidor.
-                        // Por ahora, si hay una nueva foto (imageUri != null), se pasa como un string.
-                        // El backend debe ser capaz de manejar esta URL de contenido o se debe
-                        // subir la imagen a un servicio (ej. Firebase Storage) y obtener una URL HTTP.
+                        isLoading = true
                         val finalImageUrl = imageUri?.toString() ?: imageUrl
 
                         val product = Product(
@@ -248,7 +245,7 @@ fun ProductEditScreen(
                             description = description,
                             category = category,
                             imageUrl = finalImageUrl,
-                            price = price.toDoubleOrNull() ?: 0.0,
+                            price = priceDouble,
                             stock = stock.toIntOrNull() ?: 0,
                             isVisible = isVisible
                         )

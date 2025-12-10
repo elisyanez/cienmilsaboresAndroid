@@ -29,9 +29,10 @@ fun HomeScreen(
     onLoginClick: () -> Unit,
     onLogoutClick: () -> Unit,
     onNgrokConfigClick: () -> Unit,
-    // --- NUEVAS ACCIONES PARA EL ADMIN ---
     onUserManagementClick: () -> Unit,
-    onProductManagementClick: () -> Unit
+    onProductManagementClick: () -> Unit,
+    onMisPedidosClick: () -> Unit,
+    onAdminPedidosClick: () -> Unit
 ) {
     val isLoggedIn = user != null
 
@@ -85,7 +86,7 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             if (isLoggedIn) {
-                Button(onClick = onProfileClick, modifier = Modifier.fillMaxWidth(0.8f)) { Text("Mi Perfil") }
+                Button(onClick = onMisPedidosClick, modifier = Modifier.fillMaxWidth(0.8f)) { Text("Mis Pedidos") }
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // --- BOTONES DE ADMIN ---
@@ -96,6 +97,8 @@ fun HomeScreen(
                     Button(onClick = onUserManagementClick, modifier = Modifier.fillMaxWidth(0.8f)) { Text("Gestión de Usuarios") }
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(onClick = onProductManagementClick, modifier = Modifier.fillMaxWidth(0.8f)) { Text("Gestión de Productos") }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = onAdminPedidosClick, modifier = Modifier.fillMaxWidth(0.8f)) { Text("Ver Pedidos de Usuarios") }
                     Divider(modifier = Modifier.padding(vertical = 16.dp))
                 }
 
@@ -123,11 +126,12 @@ private fun HomeTopAppBar(
                     Icon(imageVector = Icons.Default.Settings, contentDescription = "Configuración de Ngrok")
                 }
             }
-            if (isLoggedIn) {
+            // El perfil de usuario no es visible en el home, se accede desde un menú lateral o similar
+            /*if (isLoggedIn) {
                 IconButton(onClick = onProfileClick) {
                     Icon(imageVector = Icons.Default.AccountCircle, contentDescription = "Abrir perfil")
                 }
-            }
+            }*/
         },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -149,7 +153,9 @@ fun HomeScreenPreview() {
             onLogoutClick = {},
             onNgrokConfigClick = {},
             onUserManagementClick = {},
-            onProductManagementClick = {}
+            onProductManagementClick = {},
+            onMisPedidosClick = {},
+            onAdminPedidosClick = {}
         )
     }
 }

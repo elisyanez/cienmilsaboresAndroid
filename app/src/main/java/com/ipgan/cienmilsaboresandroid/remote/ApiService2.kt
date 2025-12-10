@@ -1,11 +1,6 @@
 package com.ipgan.cienmilsaboresandroid.remote
 
-import com.ipgan.cienmilsaboresandroid.model.ComunaDTO
-import com.ipgan.cienmilsaboresandroid.model.LoginRequest
-import com.ipgan.cienmilsaboresandroid.model.LoginResponse
-import com.ipgan.cienmilsaboresandroid.model.Product
-import com.ipgan.cienmilsaboresandroid.model.RegionDTO
-import com.ipgan.cienmilsaboresandroid.model.User
+import com.ipgan.cienmilsaboresandroid.model.*
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -33,20 +28,33 @@ interface ApiService2 {
     @GET("/api/productos")
     suspend fun getProductos(): Response<List<Product>>
 
-    // ¡CAMBIO! El código es ahora un String
     @GET("/api/productos/{codigo}")
     suspend fun getProductoByCodigo(@Path("codigo") codigo: String): Response<Product>
 
     @POST("/api/productos")
     suspend fun createProducto(@Body product: Product): Response<Product>
 
-    // ¡CAMBIO! El código es ahora un String
     @PUT("/api/productos/{codigo}")
     suspend fun updateProducto(@Path("codigo") codigo: String, @Body product: Product): Response<Product>
 
-    // ¡CAMBIO! El código es ahora un String
     @DELETE("/api/productos/{codigo}")
     suspend fun deleteProducto(@Path("codigo") codigo: String): Response<Unit>
+
+    // --- PEDIDOS ---
+    @POST("/api/pedidos")
+    suspend fun crearPedido(@Body request: CrearPedidoRequest): Response<Pedido>
+
+    @GET("/api/pedidos/usuario/{usuarioRun}")
+    suspend fun obtenerPedidosUsuario(@Path("usuarioRun") usuarioRun: String): Response<List<Pedido>>
+
+    @GET("/api/pedidos")
+    suspend fun obtenerTodosPedidos(): Response<List<Pedido>>
+
+    @PUT("/api/pedidos/{pedidoId}/estado")
+    suspend fun actualizarEstadoPedido(
+        @Path("pedidoId") pedidoId: Long,
+        @Body request: ActualizarEstadoRequest
+    ): Response<Pedido>
 
     // --- LOGIN ---
     @POST("/api/auth/login")

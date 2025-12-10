@@ -9,9 +9,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,17 +19,22 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.ipgan.cienmilsaboresandroid.R
 import com.ipgan.cienmilsaboresandroid.model.Product
+import com.ipgan.cienmilsaboresandroid.navigation.Screen
 import com.ipgan.cienmilsaboresandroid.viewModel.CarritoViewModel
 import java.text.NumberFormat
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CarritoScreen(carritoViewModel: CarritoViewModel = viewModel()) {
+fun CarritoScreen(
+    navController: NavController,
+    carritoViewModel: CarritoViewModel = viewModel()
+) {
     val items = carritoViewModel.itemsCarrito
     val total by carritoViewModel.total
 
@@ -71,7 +74,12 @@ fun CarritoScreen(carritoViewModel: CarritoViewModel = viewModel()) {
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { carritoViewModel.vaciarItems() }, modifier = Modifier.weight(1f)) { Text("Vaciar Carrito") }
-                    Button(onClick = { /* TODO: Pagar */ }, modifier = Modifier.weight(1f)) { Text("Proceder al Pago") }
+                    Button(
+                        onClick = { navController.navigate(Screen.ConfirmarPedido.route) },
+                        modifier = Modifier.weight(1f)
+                    ) { 
+                        Text("Proceder al Pago") 
+                    }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
