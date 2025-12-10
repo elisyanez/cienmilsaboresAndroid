@@ -1,91 +1,116 @@
 package com.ipgan.cienmilsaboresandroid.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.ipgan.cienmilsaboresandroid.R
+import com.ipgan.cienmilsaboresandroid.viewModel.CarritoViewModel
 import com.ipgan.cienmilsaboresandroid.viewModel.ProductViewModel
+import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetalleScreen(
     navController: NavController,
-    // ¡CAMBIO! El ID del producto ahora es un String.
     productId: String,
-    productViewModel: ProductViewModel = viewModel()
+    productViewModel: ProductViewModel = viewModel(),
+    carritoViewModel: CarritoViewModel = viewModel() // Añadimos el CarritoViewModel
 ) {
     val product by productViewModel.selectedProduct.collectAsState()
     val isLoading by productViewModel.isLoading.collectAsState()
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
     LaunchedEffect(productId) {
         if (productId.isNotBlank()) {
-            // ¡CAMBIO! Pasamos el ID como String al ViewModel.
             productViewModel.loadProductById(productId)
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        if (isLoading) {
-            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-        } else {
-            product?.let { p ->
-                // Formateador para la moneda CLP
-                val format = NumberFormat.getCurrencyInstance(Locale("es", "CL"))
-                format.maximumFractionDigits = 0 // CLP no usa decimales
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = { TopAppBar(title = { Text(product?.name ?: "Detalle del Producto") }) }
+    ) { innerPadding ->
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            } else {
+                product?.let { p ->
+                    val clpFormat = remember { NumberFormat.getCurrencyInstance(Locale("es", "CL")).apply { maximumFractionDigits = 0 } }
 
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = p.name ?: "Producto no encontrado",
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = p.description ?: "Sin descripción",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        // ¡CAMBIO! Usamos el formateador de moneda para el precio Double.
-                        text = format.format(p.price ?: 0.0),
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.height(32.dp))
-                    Button(onClick = { navController.popBackStack() }) {
-                        Text(text = "Volver al Catálogo")
+                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                        // --- IMAGEN DEL PRODUCTO ---
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(p.imageUrl)
+                                .crossfade(true)
+                                .build(),
+                            placeholder = painterResource(R.drawable.logo_mil_sabores),
+                            contentDescription = p.name,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(250.dp)
+                        )
+
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = p.name ?: "Producto no encontrado",
+                                style = MaterialTheme.typography.headlineLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = clpFormat.format(p.price ?: 0.0),
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = p.description ?: "Sin descripción",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Spacer(modifier = Modifier.height(32.dp))
+
+                            Button(
+                                onClick = {
+                                    carritoViewModel.agregarItems(p)
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("Producto agregado al carrito")
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Agregar al carrito")
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedButton(
+                                onClick = { navController.popBackStack() },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Volver al Catálogo")
+                            }
+                        }
                     }
-                }
-            } ?: run {
-                // Esto se muestra si el producto no se encuentra o hay un error
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = "Producto no encontrado",
-                        style = MaterialTheme.typography.headlineMedium
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = { navController.popBackStack() }) {
-                        Text(text = "Volver al Catálogo")
+                } ?: run {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Producto no encontrado")
                     }
                 }
             }

@@ -4,16 +4,24 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.ipgan.cienmilsaboresandroid.R
 import com.ipgan.cienmilsaboresandroid.model.Product
 import com.ipgan.cienmilsaboresandroid.navigation.Screen
 import com.ipgan.cienmilsaboresandroid.ui.theme.CienMilSaboresAndroidTheme
@@ -33,7 +41,6 @@ fun CatalogoScreen(
     val products by productViewModel.products.collectAsState()
     val isLoading by productViewModel.isLoading.collectAsState()
 
-    // 1. Añadimos el estado para el Snackbar y el scope para lanzarlo
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -41,12 +48,9 @@ fun CatalogoScreen(
         productViewModel.loadProducts()
     }
 
-    // 2. Usamos un Scaffold para poder mostrar el Snackbar
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(title = { Text("Catálogo de Productos", fontWeight = FontWeight.Bold) })
-        }
+        topBar = { TopAppBar(title = { Text("Catálogo de Productos", fontWeight = FontWeight.Bold) }) }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -65,22 +69,18 @@ fun CatalogoScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(vertical = 16.dp)
                 ) {
                     items(items = products, key = { product -> product.id!! }) { product ->
                         ProductItem(
                             product = product,
                             onClick = {
-                                product.id?.let {
-                                    navController.navigate(Screen.Detalle.createRoute(it))
-                                }
+                                product.id?.let { navController.navigate(Screen.Detalle.createRoute(it)) }
                             },
-                            // 3. Al añadir, mostramos el Snackbar
                             onAdd = {
                                 carritoViewModel.agregarItems(product)
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("Producto agregado al carrito")
-                                }
+                                scope.launch { snackbarHostState.showSnackbar("Producto agregado al carrito") }
                             }
                         )
                     }
@@ -95,16 +95,24 @@ fun ProductItem(product: Product, onClick: () -> Unit, onAdd: () -> Unit) {
     val format = remember { NumberFormat.getCurrencyInstance(Locale("es", "CL")).apply { maximumFractionDigits = 0 } }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            // --- IMAGEN DEL PRODUCTO ---
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(product.imageUrl)
+                    .crossfade(true)
+                    .build(),
+                placeholder = painterResource(R.drawable.logo_mil_sabores), // Imagen de placeholder
+                contentDescription = product.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.size(64.dp).clip(CircleShape) // Imagen redonda
+            )
+
+            Spacer(modifier = Modifier.width(16.dp))
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = product.name ?: "Producto sin nombre",
