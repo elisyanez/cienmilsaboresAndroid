@@ -33,17 +33,20 @@ interface ApiService2 {
     @GET("/api/productos")
     suspend fun getProductos(): Response<List<Product>>
 
+    // ¡CAMBIO! El código es ahora un String
     @GET("/api/productos/{codigo}")
-    suspend fun getProductoByCodigo(@Path("codigo") codigo: Int): Product
+    suspend fun getProductoByCodigo(@Path("codigo") codigo: String): Response<Product>
 
     @POST("/api/productos")
     suspend fun createProducto(@Body product: Product): Response<Product>
 
+    // ¡CAMBIO! El código es ahora un String
     @PUT("/api/productos/{codigo}")
-    suspend fun updateProducto(@Path("codigo") codigo: Int, @Body product: Product): Response<Product>
+    suspend fun updateProducto(@Path("codigo") codigo: String, @Body product: Product): Response<Product>
 
+    // ¡CAMBIO! El código es ahora un String
     @DELETE("/api/productos/{codigo}")
-    suspend fun deleteProducto(@Path("codigo") codigo: Int): Response<Unit>
+    suspend fun deleteProducto(@Path("codigo") codigo: String): Response<Unit>
 
     // --- LOGIN ---
     @POST("/api/auth/login")

@@ -14,23 +14,29 @@ class CarritoViewModel : ViewModel() {
     val total: State<Double> = _total
 
     fun agregarItems(product: Product) {
+        // Aumenta la cantidad del producto en el carrito.
         _itemsCarrito[product] = (_itemsCarrito[product] ?: 0) + 1
         calcularTotal()
     }
 
     fun eliminarItems(product: Product) {
+        // Elimina completamente un producto del carrito.
         if (_itemsCarrito.containsKey(product)) {
             _itemsCarrito.remove(product)
             calcularTotal()
         }
     }
 
-    private fun calcularTotal() {
-        _total.value = _itemsCarrito.entries.sumOf { (product, qty) -> (((product.price)?:0.0 ).toDouble() * qty) }
-    }
-
     fun vaciarItems() {
         _itemsCarrito.clear()
         _total.value = 0.0
+    }
+
+    private fun calcularTotal() {
+        // Recalcula el total sumando el precio de cada producto por su cantidad.
+        // La lógica ahora usa el precio como Double, que es más seguro.
+        _total.value = _itemsCarrito.entries.sumOf { (product, qty) ->
+            (product.price ?: 0.0) * qty
+        }
     }
 }

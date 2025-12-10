@@ -3,70 +3,88 @@ package com.ipgan.cienmilsaboresandroid.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel // 1. IMPORTAMOS viewModel()
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ipgan.cienmilsaboresandroid.model.Product
-import com.ipgan.cienmilsaboresandroid.ui.theme.CienMilSaboresAndroidTheme
 import com.ipgan.cienmilsaboresandroid.viewModel.CarritoViewModel
+import java.text.NumberFormat
+import java.util.Locale
 
 @Composable
-// 2. ELIMINAMOS EL PARÁMETRO DE LA FUNCIÓN
-fun CarritoScreen(
-    // El parámetro `repo: CarritoViewModel` se ha ido.
-    // En su lugar, lo obtenemos aquí adentro:
-    carritoViewModel: CarritoViewModel = viewModel()
-) {
-    // 3. USAMOS LA NUEVA VARIABLE `carritoViewModel`
+fun CarritoScreen(carritoViewModel: CarritoViewModel = viewModel()) {
+    // 1. CORRECCIÓN: Leemos el mapa de items directamente. Compose se encarga de observar los cambios.
     val items = carritoViewModel.itemsCarrito
-    // OJO: El total ahora se observa directamente desde el ViewModel.
-    // No es necesario usar `.value` si se declara como State<Double> y se usa 'by'.
-    // Para que funcione como está, he dejado `carritoViewModel.total.value`.
-    val total = carritoViewModel.total.value
+    val total by carritoViewModel.total
+
+    // Formateador para la moneda CLP
+    val clpFormat = remember { NumberFormat.getCurrencyInstance(Locale("es", "CL")).apply { maximumFractionDigits = 0 } }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Carrito de compras")
-        Spacer(modifier = Modifier.height(8.dp))
+        Text("Carrito de Compras", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(16.dp))
 
         if (items.isEmpty()) {
-            Text("El carrito está vacío.")
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("El carrito está vacío.", style = MaterialTheme.typography.bodyLarge)
+            }
         } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f)
-            ) {
-                // Usamos `items.toList()` porque `LazyColumn` prefiere listas.
-                items(items.entries.toList()) { (product, qty) ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            // Asumo que tu modelo Product tiene `name`, `price`, etc.
-                            // Si los nombres de las propiedades son nom_prod, precio_prod, ajústalo aquí.
-                            Text(text = product.name ?: "Producto sin nombre")
-                            Text("Precio: ${product.price} CLP")
-                            Text("Cantidad: $qty")
-                            Text(
-                                "Subtotal: ${(product.price ?: 0.0).toDouble()* qty} CLP" // <--- CAMBIO CLAVE
-                            )
-                        }
-                        // 4. USAMOS LA NUEVA VARIABLE `carritoViewModel`
-                        Button(onClick = { carritoViewModel.eliminarItems(product) }) {
-                            Text("Eliminar")
-                        }
-                    }
+            LazyColumn(modifier = Modifier.weight(1f)) {
+                // 2. Convertimos las entradas del mapa a una lista para poder mostrarla y ordenarla.
+                items(items = items.entries.toList().sortedBy { it.key.name ?: "" }, key = { it.key.id!! }) { (product, qty) ->
+                    CartItem(product = product, quantity = qty, clpFormat = clpFormat, onRemove = { carritoViewModel.eliminarItems(product) })
+                    Divider()
                 }
             }
-            Spacer(modifier = Modifier.padding(vertical = 8.dp))
-            Text("Total: $total CLP", modifier = Modifier.padding(8.dp))
 
-            // 5. USAMOS LA NUEVA VARIABLE `carritoViewModel`
-            Button(onClick = { carritoViewModel.vaciarItems() }) {
-                Text("Vaciar carrito")
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("Total:", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(clpFormat.format(total), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { carritoViewModel.vaciarItems() }, modifier = Modifier.weight(1f)) {
+                    Text("Vaciar Carrito")
+                }
+                Button(onClick = { /* TODO: Implementar lógica de pago */ }, modifier = Modifier.weight(1f)) {
+                    Text("Proceder al Pago")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CartItem(product: Product, quantity: Int, clpFormat: NumberFormat, onRemove: () -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(product.name ?: "Producto sin nombre", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text("Precio: ${clpFormat.format(product.price ?: 0.0)} c/u", style = MaterialTheme.typography.bodyMedium)
+            Text("Cantidad: $quantity", style = MaterialTheme.typography.bodyMedium)
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                clpFormat.format((product.price ?: 0.0) * quantity),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.End
+            )
+            IconButton(onClick = onRemove) {
+                Icon(Icons.Filled.Delete, contentDescription = "Eliminar del carrito", tint = MaterialTheme.colorScheme.error)
             }
         }
     }

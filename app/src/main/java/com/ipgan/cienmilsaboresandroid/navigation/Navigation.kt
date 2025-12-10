@@ -20,7 +20,8 @@ sealed class Screen(val route: String) {
     object Registro : Screen("registro")
     object Catalogo : Screen("catalogo")
     object Detalle : Screen("detalle/{productId}") {
-        fun createRoute(productId: Int) = "detalle/$productId"
+        // ¡CAMBIO! La ruta ahora espera un String.
+        fun createRoute(productId: String) = "detalle/$productId"
     }
     object Splash : Screen("splash")
     object NgrokConfig : Screen("ngrok_config")
@@ -29,9 +30,7 @@ sealed class Screen(val route: String) {
 @Composable
 fun CienMilSaboresNavigation() {
     val navController = rememberNavController()
-    // Este ViewModel se comparte entre todas las pantallas del NavHost
     val userViewModel: UserViewModel = viewModel()
-
     val user by userViewModel.user.collectAsState()
 
     NavHost(
@@ -59,12 +58,8 @@ fun CienMilSaboresNavigation() {
                 PerfilScreen(
                     userViewModel = userViewModel,
                     user = loggedInUser,
-                    onSave = {
-                        navController.popBackStack()
-                    },
-                    onBackToHome = {
-                        navController.popBackStack()
-                    }
+                    onSave = { navController.popBackStack() },
+                    onBackToHome = { navController.popBackStack() }
                 )
             }
         }
@@ -78,14 +73,11 @@ fun CienMilSaboresNavigation() {
         }
 
         composable(Screen.Login.route) {
-            // AHORA SÍ LE PASAMOS EL VIEWMODEL COMPARTIDO
             LoginScreen(
                 userViewModel = userViewModel,
                 onLoginSuccess = {
                     navController.navigate(Screen.Home.route) {
-                        popUpTo(navController.graph.startDestinationId) {
-                            inclusive = true
-                        }
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
                     }
                 },
                 onGoRegister = { navController.navigate(Screen.Registro.route) },
@@ -107,9 +99,11 @@ fun CienMilSaboresNavigation() {
 
         composable(
             route = Screen.Detalle.route,
-            arguments = listOf(navArgument("productId") { type = NavType.IntType })
+            // ¡CAMBIO! El tipo de argumento ahora es String.
+            arguments = listOf(navArgument("productId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val productId = backStackEntry.arguments?.getInt("productId") ?: 0
+            // ¡CAMBIO! Obtenemos el String y nos aseguramos de que no sea nulo.
+            val productId = backStackEntry.arguments?.getString("productId") ?: ""
             DetalleScreen(
                 navController = navController,
                 productId = productId

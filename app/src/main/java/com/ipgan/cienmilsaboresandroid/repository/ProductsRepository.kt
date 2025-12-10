@@ -13,24 +13,25 @@ class ProductsRepository(context: Context) {
         else null
     }
 
-    suspend fun getProductoByCodigo(codigo: Int): Product? {
+    // ¡CAMBIO! El código es ahora un String
+    suspend fun getProductoByCodigo(codigo: String): Product? {
         val response = apiService.getProductoByCodigo(codigo)
-        return if (response != null) response
-        else null
+        return if (response.isSuccessful) response.body() else null
     }
 
     suspend fun crearProducto(product: Product): Boolean {
         val response = apiService.createProducto(product)
-        return if (response != null) true
-        else false
+        return response.isSuccessful
     }
 
-    suspend fun eliminarProducto(codigo: Int):Boolean{
+    // ¡CAMBIO! El código es ahora un String
+    suspend fun eliminarProducto(codigo: String): Boolean {
         val response = apiService.deleteProducto(codigo)
         return response.isSuccessful
     }
 
-    suspend fun updateProducto(codigo: Int, product: Product): Boolean {
+    // ¡CAMBIO! El código es ahora un String
+    suspend fun updateProducto(codigo: String, product: Product): Boolean {
         val response = apiService.updateProducto(codigo, product)
         return response.isSuccessful
     }
@@ -38,7 +39,6 @@ class ProductsRepository(context: Context) {
     suspend fun testPing(): Boolean {
         return try {
             val response = apiService.testPing()
-            // Suponiendo que testPing() devuelve una Response<String> o similar
             response.isSuccessful && response.body() != null
         } catch (e: Exception) {
             false
