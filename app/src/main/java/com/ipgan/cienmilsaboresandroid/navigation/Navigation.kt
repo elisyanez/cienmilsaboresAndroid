@@ -25,13 +25,15 @@ sealed class Screen(val route: String) {
     }
     object Splash : Screen("splash")
     object NgrokConfig : Screen("ngrok_config")
+    // --- NUEVAS RUTAS DE ADMINISTRADOR ---
+    object UserManagement : Screen("user_management")
+    object ProductManagement : Screen("product_management")
 }
 
 @Composable
 fun CienMilSaboresNavigation() {
     val navController = rememberNavController()
 
-    // 1. CREAMOS LAS INSTANCIAS COMPARTIDAS DE LOS VIEWMODELS
     val userViewModel: UserViewModel = viewModel()
     val carritoViewModel: CarritoViewModel = viewModel()
 
@@ -53,8 +55,20 @@ fun CienMilSaboresNavigation() {
                 onCatalogClick = { navController.navigate(Screen.Catalogo.route) },
                 onLoginClick = { navController.navigate(Screen.Login.route) },
                 onLogoutClick = { userViewModel.logout() },
-                onNgrokConfigClick = { navController.navigate(Screen.NgrokConfig.route) }
+                onNgrokConfigClick = { navController.navigate(Screen.NgrokConfig.route) },
+                // --- CONECTAMOS LOS BOTONES DE ADMIN A LAS NUEVAS RUTAS ---
+                onUserManagementClick = { navController.navigate(Screen.UserManagement.route) },
+                onProductManagementClick = { navController.navigate(Screen.ProductManagement.route) }
             )
+        }
+
+        // --- COMPOSABLES DE LAS NUEVAS PANTALLAS ---
+        composable(Screen.UserManagement.route) {
+             UserManagementScreen(userViewModel = userViewModel)
+        }
+
+        composable(Screen.ProductManagement.route) {
+             ProductManagementScreen(navController = navController)
         }
 
         composable(Screen.Perfil.route) {
@@ -68,12 +82,10 @@ fun CienMilSaboresNavigation() {
             }
         }
 
-        // 2. PASAMOS LA INSTANCIA COMPARTIDA A CARRITOSCREEN
         composable(Screen.Carrito.route) {
             CarritoScreen(carritoViewModel = carritoViewModel)
         }
 
-        // 3. PASAMOS LA INSTANCIA COMPARTIDA A CATALOGOSCREEN
         composable(Screen.Catalogo.route) {
             CatalogoScreen(
                 navController = navController,
@@ -111,10 +123,10 @@ fun CienMilSaboresNavigation() {
             arguments = listOf(navArgument("productId") { type = NavType.StringType })
         ) { backStackEntry ->
             val productId = backStackEntry.arguments?.getString("productId") ?: ""
-            // 4. A la pantalla de detalle también le pasamos el CarritoViewModel
             DetalleScreen(
                 navController = navController,
-                productId = productId
+                productId = productId,
+                carritoViewModel = carritoViewModel
             )
         }
 

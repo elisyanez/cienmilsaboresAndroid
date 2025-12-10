@@ -9,15 +9,20 @@ import com.ipgan.cienmilsaboresandroid.repository.UsuarioRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class UserViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = UsuarioRepository(application.applicationContext)
 
-    // --- ESTADO DEL USUARIO ---
+    // --- ESTADO DEL USUARIO LOGUEADO ---
     private val _user = MutableStateFlow<User?>(null)
     val user: StateFlow<User?> = _user.asStateFlow()
+
+    // --- ESTADO PARA LA GESTIÓN DE USUARIOS (ADMIN) ---
+    private val _allUsers = MutableStateFlow<List<User>>(emptyList())
+    val allUsers: StateFlow<List<User>> = _allUsers.asStateFlow()
 
     // --- ESTADO DE REGIONES Y COMUNAS ---
     private val _regiones = MutableStateFlow<List<RegionDTO>>(emptyList())
@@ -27,9 +32,28 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
     val comunas: StateFlow<List<ComunaDTO>> = _comunas.asStateFlow()
 
     init {
-        // Cargamos las regiones y comunas al iniciar el ViewModel
         loadRegionesYComunas()
     }
+
+    // --- FUNCIONES DE GESTIÓN DE USUARIOS ---
+    fun loadAllUsers() {
+        viewModelScope.launch {
+            _allUsers.value = repository.getUsuarios() ?: emptyList()
+        }
+    }
+
+    suspend fun deleteUser(run: String): Boolean {
+        val success = repository.eliminarUsuario(run)
+        if (success) {
+            // Si se elimina con éxito, actualizamos la lista localmente
+            _allUsers.update { currentUserList ->
+                currentUserList.filterNot { it.run == run }
+            }
+        }
+        return success
+    }
+
+    // --- FUNCIONES DE LOGIN Y PERFIL ---
 
     private fun loadRegionesYComunas() {
         viewModelScope.launch {
@@ -53,7 +77,7 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
                     name = responseBody.name,
                     lastName = responseBody.lastName,
                     email = responseBody.email,
-                    password = "", // La contraseña no se guarda en el estado
+                    password = "",
                     address = responseBody.address,
                     role = responseBody.role,
                     region = responseBody.region,
@@ -76,6 +100,7 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
 
     fun logout() {
         _user.value = null
+        _allUsers.value = emptyList() // Limpiamos la lista de usuarios al salir
         TokenManager.clearToken(getApplication())
         com.ipgan.cienmilsaboresandroid.remote.RetrofitInstance2.invalidate()
     }
@@ -84,8 +109,6 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
         _user.value?.let { currentUser ->
             val run = currentUser.run
             if (repository.updateUsuario(run, updatedUser)) {
-                // Actualizamos el estado con la información completa
-                // que viene del formulario.
                 _user.value = updatedUser
             }
         }
